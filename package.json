@@ -1,5 +1,8 @@
 {
-  "author": "",
+  "author": "piro <piro.haniwa@gmail.com> (https://kk-web.link/)",
+  "bugs": {
+    "url": "https://github.com/piro0919/mac-classic-player/issues"
+  },
   "build": {
     "appId": "com.example.macclassicplayer",
     "files": [
@@ -10,6 +13,7 @@
       "!node_modules/.cache"
     ],
     "mac": {
+      "icon": "assets/icon.icns",
       "target": "dmg"
     },
     "productName": "Mac Classic Player"
@@ -81,6 +85,10 @@
       "stylelint": "16.17.0"
     }
   },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/piro0919/mac-classic-player.git"
+  },
   "scripts": {
     "build": "vite build && npm run build-main && electron-builder",
     "build-main": "tsc main/main.ts --outDir dist",
@@ -88,5 +96,5 @@
     "electron": "npm run build-main && electron .",
     "start": "concurrently \"vite\" \"wait-on http://localhost:5173 && npm run electron\""
   },
-  "version": "0.0.1"
+  "version": "0.0.2"
 }

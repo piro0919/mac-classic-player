@@ -124,11 +124,9 @@ input[type="range"]::-webkit-slider-thumb:hover {
   align-items: center;
   display: flex;
   justify-content: center;
-  opacity: 0.5;
 }
 
 .placeholderImage {
   height: auto;
-  opacity: 0.5;
-  width: 96px;
+  width: 120px;
 }
