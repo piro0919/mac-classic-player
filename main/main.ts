@@ -2,6 +2,8 @@ import { app, BrowserWindow } from "electron";
 import * as path from "path";
 import * as fs from "fs/promises";
 
+let openFilePath: string | null = null;
+
 interface Settings {
   windowWidth: number;
   windowHeight: number;
@@ -58,9 +60,26 @@ const createWindow = async () => {
 
   win.loadURL(url);
 
+  win.webContents.once("did-finish-load", () => {
+    if (openFilePath) {
+      win.webContents.send("open-file", openFilePath);
+    }
+  });
+
   if (isDev) {
     win.webContents.openDevTools({ mode: "detach" });
   }
 };
+
+app.on("open-file", (event, path) => {
+  event.preventDefault();
+  openFilePath = path;
+});
+
+const args = process.argv;
+const fileFromArg = args.find((arg) => /\.(mp4|mp3|mov|m4a|wav)$/i.test(arg));
+if (fileFromArg) {
+  openFilePath = fileFromArg;
+}
 
 app.whenReady().then(createWindow);

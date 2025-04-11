@@ -23,6 +23,7 @@ const VideoPlayer: React.FC = () => {
   const [muted, setMuted] = useState(false);
   const [playerRef, setPlayerRef] = useState<ReactPlayer | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
+
   const formatTime = (time: number) => {
     const minutes = Math.floor(time / 60);
     const seconds = Math.floor(time % 60);
@@ -30,6 +31,7 @@ const VideoPlayer: React.FC = () => {
       .toString()
       .padStart(2, "0")}`;
   };
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -174,6 +176,18 @@ const VideoPlayer: React.FC = () => {
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [videoUrl, playerRef, currentTime, volume, duration]);
+
+  useEffect(() => {
+    const { ipcRenderer } = window.require("electron");
+    // @ts-expect-error
+    ipcRenderer.on("open-file", (_, filePath) => {
+      setVideoUrl(filePath);
+      setCurrentTime(0);
+      setDuration(0);
+      document.title = filePath.split("/").pop() || "Video Player";
+      setIsPlaying(true);
+    });
+  }, []);
 
   return (
     <div ref={containerRef} className={styles.container}>
