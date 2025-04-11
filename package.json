@@ -5,11 +5,17 @@
   },
   "build": {
     "appId": "com.example.macclassicplayer",
+    "asar": true,
     "files": [
       "dist",
       "main",
       "index.html",
       "package.json",
+      "!**/*.map",
+      "!**/test/**",
+      "!**/tests/**",
+      "!**/*.md",
+      "!**/example/**",
       "!node_modules/.cache"
     ],
     "mac": {
@@ -90,15 +96,17 @@
     "url": "https://github.com/piro0919/mac-classic-player.git"
   },
   "scripts": {
-    "build": "vite build && npm run build-main && electron-builder",
+    "build": "vite build --sourcemap false && npm run build-main && electron-builder",
     "build-main": "tsc main/main.ts --outDir dist",
     "codesign": "codesign --deep --force --sign - 'dist/mac-arm64/Mac Classic Player.app'",
     "dev": "npm run start",
     "electron": "npm run build-main && electron .",
+    "generate-icon": "bash scripts/generate-icon.sh",
     "patch-plist": "bash scripts/patch-plist.sh",
     "postbuild": "npm run patch-plist && npm run codesign && npm run zip",
+    "prebuild": "npm run generate-icon",
     "start": "concurrently \"vite\" \"wait-on http://localhost:5173 && npm run electron\"",
     "zip": "ditto -c -k --sequesterRsrc --keepParent \"dist/mac-arm64/Mac Classic Player.app\" \"MacClassicPlayer.zip\""
   },
-  "version": "0.0.3"
+  "version": "0.0.4"
 }
