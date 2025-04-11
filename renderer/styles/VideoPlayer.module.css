@@ -1,5 +1,5 @@
 .container {
-  background-color: #1b1b1b;
+  background-color: #1a1d23;
   color: #fff;
   display: flex;
   flex-direction: column;
@@ -9,6 +9,8 @@
 }
 
 .playerArea {
+  background-color: #1a1d23;
+  cursor: pointer;
   display: flex;
   flex: 1;
   flex-direction: column;
@@ -17,8 +19,8 @@
 
 .controls {
   align-items: center;
-  background: #1a1a1a;
-  border-top: 1px solid #444;
+  background: #1a1d23;
+  border-top: 1px solid #2a2e36;
   box-sizing: border-box;
   display: flex;
   flex-wrap: wrap;
@@ -31,7 +33,7 @@
 
 .controlButton {
   align-items: center;
-  background: #2a2a2a;
+  background: #2a2e36;
   border: none;
   border-radius: 4px;
   color: #fff;
@@ -46,15 +48,12 @@
 }
 
 .controlButton:hover {
-  background: #444;
+  background: #3a3e47;
 }
 
 .dropZone {
   align-items: center;
-  background: linear-gradient(135deg, #1b1b1b 0%, #222 100%);
-  border: 2px dashed #555;
-  border-radius: 8px;
-  color: #ccc;
+  color: #d3d7de;
   cursor: pointer;
   display: flex;
   flex: 1;
@@ -64,18 +63,10 @@
   margin: 2rem;
   padding: 2rem;
   text-align: center;
-  transition:
-    background 0.3s ease,
-    border-color 0.3s ease;
-}
-
-.dropZone:hover {
-  background: #2a2a2a;
-  border-color: #777;
 }
 
 .timeInfo {
-  color: #aaa;
+  color: #aeb4bc;
   font-size: 0.8rem;
   margin-left: auto;
   padding-left: 1rem;
@@ -93,7 +84,7 @@
 
 input[type="range"] {
   appearance: none;
-  background: #444;
+  background: #444a55;
   border-radius: 2px;
   height: 4px;
   margin: 0;
@@ -102,7 +93,7 @@ input[type="range"] {
 
 input[type="range"]::-webkit-slider-thumb {
   appearance: none;
-  background: #ccc;
+  background: #d3d7de;
   border: none;
   border-radius: 50%;
   cursor: pointer;
@@ -112,7 +103,7 @@ input[type="range"]::-webkit-slider-thumb {
 }
 
 input[type="range"]::-webkit-slider-thumb:hover {
-  background: #fff;
+  background: #ffffff;
 }
 
 .placeholder {

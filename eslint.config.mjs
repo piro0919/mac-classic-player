@@ -12,6 +12,9 @@ import { dirname } from "path";
 import { fileURLToPath } from "url";
 import { fixupPluginRules } from "@eslint/compat";
 import filenamesPlugin from "eslint-plugin-filenames";
+import reactPlugin from "eslint-plugin-react";
+import importPlugin from "eslint-plugin-import";
+import reactHooksPlugin from "eslint-plugin-react-hooks";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -31,8 +34,6 @@ const eslintConfig = [
     "plugin:no-unsanitized/recommended-legacy",
     "plugin:promise/recommended",
     "plugin:security/recommended-legacy",
-    "next/core-web-vitals",
-    "next/typescript",
     "prettier",
   ),
   {
@@ -50,14 +51,15 @@ const eslintConfig = [
       "css-modules": cssModules,
       ext,
       filenames: fixupPluginRules(filenamesPlugin),
+      import: importPlugin,
       perfectionist,
       promise,
+      react: reactPlugin,
+      "react-hooks": reactHooksPlugin,
       "unused-imports": unusedImports,
       "write-good-comments": writeGoodComments,
     },
     rules: {
-      "@next/next/no-html-link-for-pages": "error",
-      "@next/next/no-img-element": "error",
       "@typescript-eslint/consistent-type-definitions": ["error", "type"],
       "@typescript-eslint/consistent-type-imports": [
         "error",

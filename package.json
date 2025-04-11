@@ -21,12 +21,17 @@
     ],
     "mac": {
       "icon": "assets/icon.icns",
-      "target": "dmg"
+      "target": [
+        "dir",
+        "zip"
+      ]
     },
     "productName": "Mac Classic Player"
   },
   "dependencies": {
+    "electron-updater": "6.6.2",
     "lucide-react": "0.487.0",
+    "ms": "2.1.3",
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "react-player": "2.16.0",
@@ -48,10 +53,10 @@
     "@uphold/commitlint-config": "1.1.1",
     "@vitejs/plugin-react": "4.3.4",
     "concurrently": "9.1.2",
+    "dotenv-cli": "8.0.0",
     "electron": "35.1.5",
     "electron-builder": "26.0.12",
     "eslint": "^9",
-    "eslint-config-next": "15.1.7",
     "eslint-config-prettier": "10.1.1",
     "eslint-plugin-css": "0.11.0",
     "eslint-plugin-css-modules": "2.12.0",
@@ -61,6 +66,8 @@
     "eslint-plugin-no-unsanitized": "4.1.2",
     "eslint-plugin-perfectionist": "4.10.1",
     "eslint-plugin-promise": "7.2.1",
+    "eslint-plugin-react": "7.37.5",
+    "eslint-plugin-react-hooks": "5.2.0",
     "eslint-plugin-security": "3.0.1",
     "eslint-plugin-unused-imports": "4.1.4",
     "eslint-plugin-write-good-comments": "0.2.0",
@@ -92,23 +99,32 @@
       "stylelint": "16.17.0"
     }
   },
+  "productName": "Media Classic Player",
   "repository": {
     "type": "git",
     "url": "https://github.com/piro0919/mac-classic-player.git"
   },
   "scripts": {
-    "build": "vite build --sourcemap false && npm run build-main && electron-builder",
+    "build": "vite build --sourcemap false && npm run build-main && electron-builder --publish never",
     "build-main": "tsc main/main.ts --outDir dist",
     "codesign": "codesign --deep --force --sign - 'dist/mac-arm64/Mac Classic Player.app'",
     "dev": "npm run start",
     "electron": "npm run build-main && electron .",
     "generate-icon": "bash scripts/generate-icon.sh",
+    "lint": "npx eslint",
+    "lint:fix": "npx eslint --fix",
+    "lint:style": "stylelint --fix '**/*.css'",
     "patch-plist": "bash scripts/patch-plist.sh",
-    "postbuild": "npm run patch-plist && npm run strip-bloat && npm run codesign && npm run zip",
+    "postbuild": "npm run patch-plist && npm run strip-bloat && npm run codesign && npm run zip && rm -f dist/*-arm64-mac.zip",
     "prebuild": "npm run generate-icon",
+    "prettier": "prettier --write .",
+    "release": "npm run release:create && npm run release:upload",
+    "release:create": "gh release create v$npm_package_version -t \"Release v$npm_package_version\" --generate-notes",
+    "release:upload": "gh release upload v$npm_package_version \"dist/Mac Classic Player-$npm_package_version-mac.zip\" \"dist/latest-mac.yml\" --clobber",
     "start": "concurrently \"vite\" \"wait-on http://localhost:5173 && npm run electron\"",
     "strip-bloat": "bash scripts/strip-electron-bloat.sh",
-    "zip": "ditto -c -k --sequesterRsrc --keepParent \"dist/mac-arm64/Mac Classic Player.app\" \"MacClassicPlayer.zip\""
+    "type-check": "tsc --noEmit",
+    "zip": "ditto -c -k --sequesterRsrc --keepParent \"dist/mac-arm64/Mac Classic Player.app\" \"dist/Mac Classic Player-${npm_package_version}-mac.zip\""
   },
-  "version": "0.0.6"
+  "version": "0.0.7"
 }
