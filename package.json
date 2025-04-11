@@ -8,6 +8,7 @@
     "asar": true,
     "files": [
       "dist",
+      "!dist/mac-arm64",
       "main",
       "index.html",
       "package.json",
@@ -108,5 +109,5 @@
     "start": "concurrently \"vite\" \"wait-on http://localhost:5173 && npm run electron\"",
     "zip": "ditto -c -k --sequesterRsrc --keepParent \"dist/mac-arm64/Mac Classic Player.app\" \"MacClassicPlayer.zip\""
   },
-  "version": "0.0.4"
+  "version": "0.0.5"
 }
