@@ -88,5 +88,5 @@
     "electron": "npm run build-main && electron .",
     "start": "concurrently \"vite\" \"wait-on http://localhost:5173 && npm run electron\""
   },
-  "version": "1.0.0"
+  "version": "0.0.1"
 }
