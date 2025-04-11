@@ -14,11 +14,12 @@ const defaultSettings: Settings = {
   windowHeight: 600,
   windowWidth: 800,
 };
-const getSettingsPath = () => {
+const getSettingsPath = (): string => {
   return path.join(app.getPath("userData"), "settings.json");
 };
 const loadSettings = async (): Promise<Settings> => {
   try {
+    // eslint-disable-next-line security/detect-non-literal-fs-filename
     const raw = await fs.readFile(getSettingsPath(), "utf-8");
 
     return JSON.parse(raw);
@@ -27,13 +28,14 @@ const loadSettings = async (): Promise<Settings> => {
   }
 };
 const saveSettings = async (settings: Settings) => {
+  // eslint-disable-next-line security/detect-non-literal-fs-filename
   await fs.writeFile(
     getSettingsPath(),
     JSON.stringify(settings, null, 2),
     "utf-8",
   );
 };
-const createWindow = async () => {
+const createWindow = async (): Promise<void> => {
   const settings = await loadSettings();
   const win = new BrowserWindow({
     height: settings.windowHeight,
@@ -80,16 +82,45 @@ if (fileFromArg) {
   openFilePath = fileFromArg;
 }
 
-app.whenReady().then(() => {
-  autoUpdater.checkForUpdatesAndNotify();
+app
+  .whenReady()
+  .then(() => {
+    autoUpdater.checkForUpdatesAndNotify();
 
-  const menu = Menu.buildFromTemplate([
-    {
-      label: app.name,
-      submenu: [{ role: "quit" }],
-    },
-  ]);
+    const menu = Menu.buildFromTemplate([
+      {
+        label: app.name,
+        submenu: [
+          {
+            accelerator: "O",
+            click: async () => {
+              const { dialog } = require("electron");
+              const { canceled, filePaths } = await dialog.showOpenDialog({
+                filters: [
+                  {
+                    extensions: ["mp4", "mp3", "mov", "m4a", "wav"],
+                    name: "Media",
+                  },
+                ],
+                properties: ["openFile", "multiSelections"],
+              });
 
-  Menu.setApplicationMenu(menu);
-  createWindow();
-});
+              if (!canceled && filePaths.length > 0) {
+                const win = BrowserWindow.getAllWindows()[0];
+
+                win?.webContents.send("open-file", filePaths);
+              }
+            },
+            label: "ファイルを開く…",
+          },
+          { label: "Media Classic Player を終了", role: "quit" },
+        ],
+      },
+    ]);
+
+    Menu.setApplicationMenu(menu);
+    createWindow();
+
+    return;
+  })
+  .catch(() => {});

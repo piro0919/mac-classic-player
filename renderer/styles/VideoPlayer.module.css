@@ -69,7 +69,9 @@
   color: #aeb4bc;
   font-size: 0.8rem;
   margin-left: auto;
+  min-width: 120px;
   padding-left: 1rem;
+  text-align: right;
   white-space: nowrap;
 }
 

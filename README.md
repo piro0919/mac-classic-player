@@ -4,27 +4,30 @@
 
 ---
 
-**Mac Classic Player** (a.k.a **MCP**) is a minimalist and responsive video player built for macOS, featuring:
+**Mac Classic Player** (a.k.a **MCP**) is a minimalist and responsive video and audio player built for macOS, featuring:
 
 - 🎥 MPC-inspired UI
 - ⌨️ Keyboard-first control (seek, mute, fullscreen, and more)
 - 🧭 Drag & drop or one-click file loading
 - 💾 Auto-save volume and window size
-- 🖥 Native `.mov`, `.mp4`, `.webm` support (with `.hevc` planned)
+- 🖥 Native `.mov`, `.mp4`, `.webm`, and audio formats like `.mp3`, `.m4a`, `.wav` support (with `.hevc` planned)
 
 ---
 
 ## 🚀 Features
 
-| Feature              | Description                          |
-| -------------------- | ------------------------------------ |
-| 🔄 Play / Pause      | Spacebar or click anywhere           |
-| ⏹ Stop              | Resets to beginning                  |
-| ↔ Seek              | Arrow keys, or click-and-drag slider |
-| 🔊 Volume control    | Mouse or keyboard ↑↓ keys            |
-| 🖱 Drag & Drop       | or click to open local video files   |
-| 🖥 Fullscreen toggle | `F` key or button (with icon change) |
-| 💾 Persistent state  | Volume & window size are remembered  |
+| Feature               | Description                           |
+| --------------------- | ------------------------------------- |
+| 🔄 Play / Pause       | Spacebar or click anywhere            |
+| ⏹ Stop               | Resets to beginning                   |
+| ↔ Seek               | Arrow keys, or click-and-drag slider  |
+| 🔊 Volume control     | Mouse or keyboard ↑↓ keys             |
+| 🔁 Playlist support   | Multiple file queue with looping      |
+| 🖱 Drag & Drop        | or click to open local files          |
+| ⌨️ File Open Shortcut | `O` via menu or hotkey                |
+| 🖥 Fullscreen toggle  | `F` key or button (with icon change)  |
+| 💾 Persistent state   | Volume & window size remembered       |
+| 🎵 Audio support      | Supports `.mp3`, `.m4a`, `.wav`, etc. |
 
 ---
 
@@ -45,7 +48,7 @@ npm run start
 
 ## 📸 Preview
 
-> _Add screenshot or GIF here if available_
+![App screenshot](./assets/screenshot.png)
 
 ---
 
