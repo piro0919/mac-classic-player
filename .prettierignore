@@ -1,0 +1,21 @@
+# dependencies
+/node_modules
+
+# testing
+/coverage
+
+# output
+/.next/
+/out/
+
+# production
+/build
+
+# env
+.env*
+
+# static
+public
+
+# configs
+package-lock.json

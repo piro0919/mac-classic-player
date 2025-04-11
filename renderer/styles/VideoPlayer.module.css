@@ -1,0 +1,134 @@
+html,
+body {
+  overflow: hidden;
+}
+
+.container {
+  background-color: #1b1b1b;
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  font-family: "Segoe UI", sans-serif;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.playerArea {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.controls {
+  align-items: center;
+  background: #1a1a1a;
+  border-top: 1px solid #444;
+  box-sizing: border-box;
+  display: flex;
+  flex-wrap: wrap;
+  font-size: 0.8rem;
+  gap: 0.5rem;
+  height: auto;
+  padding: 0.25rem 0.5rem;
+  width: 100%;
+}
+
+.controlButton {
+  align-items: center;
+  background: #2a2a2a;
+  border: none;
+  border-radius: 4px;
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  font-size: 1rem;
+  height: 30px;
+  justify-content: center;
+  padding: 0;
+  transition: background 0.2s ease;
+  width: 30px;
+}
+
+.controlButton:hover {
+  background: #444;
+}
+
+.dropZone {
+  align-items: center;
+  background: linear-gradient(135deg, #1b1b1b 0%, #222 100%);
+  border: 2px dashed #555;
+  border-radius: 8px;
+  color: #ccc;
+  cursor: pointer;
+  display: flex;
+  flex: 1;
+  font-size: 1.1rem;
+  font-weight: 500;
+  justify-content: center;
+  margin: 2rem;
+  padding: 2rem;
+  text-align: center;
+  transition:
+    background 0.3s ease,
+    border-color 0.3s ease;
+}
+
+.dropZone:hover {
+  background: #2a2a2a;
+  border-color: #777;
+}
+
+.timeInfo {
+  color: #aaa;
+  font-size: 0.8rem;
+  margin-left: auto;
+  padding-left: 1rem;
+  white-space: nowrap;
+}
+
+.controls input[type="range"]:first-of-type {
+  flex: 1;
+  min-width: 0;
+}
+
+.controls input[type="range"]:nth-of-type(2) {
+  width: 80px;
+}
+
+input[type="range"] {
+  appearance: none;
+  background: #444;
+  border-radius: 2px;
+  height: 4px;
+  margin: 0;
+  outline: none;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  appearance: none;
+  background: #ccc;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  height: 8px;
+  transition: background 0.2s ease;
+  width: 8px;
+}
+
+input[type="range"]::-webkit-slider-thumb:hover {
+  background: #fff;
+}
+
+.placeholder {
+  align-items: center;
+  display: flex;
+  justify-content: center;
+  opacity: 0.5;
+}
+
+.placeholderImage {
+  height: auto;
+  opacity: 0.5;
+  width: 96px;
+}

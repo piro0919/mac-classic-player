@@ -1,0 +1,43 @@
+{
+  "extends": ["stylelint-config-recommended", "stylelint-config-css-modules"],
+  "plugins": [
+    "stylelint-css-modules-no-global-scoped-selector",
+    "stylelint-declaration-block-no-ignored-properties",
+    "stylelint-high-performance-animation",
+    "stylelint-no-unused-selectors",
+    "stylelint-order"
+  ],
+  "rules": {
+    "color-function-notation": "modern",
+    "css-modules/no-global-scoped-selector": [
+      true,
+      {
+        "fileExtensions": [".module.css"]
+      }
+    ],
+    "declaration-empty-line-before": "never",
+    "media-feature-range-notation": "context",
+    "order/order": [
+      "custom-properties",
+      "dollar-variables",
+      "declarations",
+      "at-rules",
+      "rules"
+    ],
+    "order/properties-alphabetical-order": true,
+    "plugin/declaration-block-no-ignored-properties": true,
+    "plugin/no-low-performance-animation-properties": [
+      true,
+      {
+        "ignore": "paint-properties"
+      }
+    ],
+    "plugin/no-unused-selectors": true,
+    "rule-empty-line-before": [
+      "always",
+      {
+        "except": ["after-single-line-comment", "first-nested"]
+      }
+    ]
+  }
+}
