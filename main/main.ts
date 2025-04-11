@@ -113,7 +113,7 @@ app
             },
             label: "ファイルを開く…",
           },
-          { label: "Media Classic Player を終了", role: "quit" },
+          { label: "Mac Classic Player を終了", role: "quit" },
         ],
       },
     ]);
