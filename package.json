@@ -92,10 +92,11 @@
   "scripts": {
     "build": "vite build && npm run build-main && electron-builder",
     "build-main": "tsc main/main.ts --outDir dist",
+    "codesign": "codesign --deep --force --sign - 'dist/mac-arm64/Mac Classic Player.app'",
     "dev": "npm run start",
     "electron": "npm run build-main && electron .",
     "patch-plist": "bash scripts/patch-plist.sh",
-    "postbuild": "npm run patch-plist && npm run zip",
+    "postbuild": "npm run patch-plist && npm run codesign && npm run zip",
     "start": "concurrently \"vite\" \"wait-on http://localhost:5173 && npm run electron\"",
     "zip": "ditto -c -k --sequesterRsrc --keepParent \"dist/mac-arm64/Mac Classic Player.app\" \"MacClassicPlayer.zip\""
   },
