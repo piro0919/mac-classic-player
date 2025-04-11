@@ -104,10 +104,11 @@
     "electron": "npm run build-main && electron .",
     "generate-icon": "bash scripts/generate-icon.sh",
     "patch-plist": "bash scripts/patch-plist.sh",
-    "postbuild": "npm run patch-plist && npm run codesign && npm run zip",
+    "postbuild": "npm run patch-plist && npm run strip-bloat && npm run codesign && npm run zip",
     "prebuild": "npm run generate-icon",
     "start": "concurrently \"vite\" \"wait-on http://localhost:5173 && npm run electron\"",
+    "strip-bloat": "bash scripts/strip-electron-bloat.sh",
     "zip": "ditto -c -k --sequesterRsrc --keepParent \"dist/mac-arm64/Mac Classic Player.app\" \"MacClassicPlayer.zip\""
   },
-  "version": "0.0.5"
+  "version": "0.0.6"
 }
