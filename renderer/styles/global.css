@@ -1,5 +1,10 @@
 @import "ress";
 
+html,
+body {
+  overflow: hidden;
+}
+
 html:focus-within {
   scroll-behavior: smooth;
 }

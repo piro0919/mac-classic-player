@@ -12,6 +12,7 @@
 *.app
 *.exe
 *.snap
+*.zip
 
 # debug logs
 npm-debug.log*

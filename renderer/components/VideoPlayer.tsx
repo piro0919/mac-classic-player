@@ -33,12 +33,14 @@ const VideoPlayer: React.FC = () => {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const url = URL.createObjectURL(file);
-    setVideoUrl(url);
-    setCurrentTime(0);
-    setDuration(0);
-    document.title = file.name;
-    setIsPlaying(true);
+    if (file.type.startsWith("video/") || file.type.startsWith("audio/")) {
+      const url = URL.createObjectURL(file);
+      setVideoUrl(url);
+      setCurrentTime(0);
+      setDuration(0);
+      document.title = file.name;
+      setIsPlaying(true);
+    }
   };
 
   useEffect(() => {
@@ -63,7 +65,10 @@ const VideoPlayer: React.FC = () => {
     const handleDrop = (e: DragEvent) => {
       e.preventDefault();
       const file = e.dataTransfer?.files[0];
-      if (file && file.type.startsWith("video/")) {
+      if (
+        file &&
+        (file.type.startsWith("video/") || file.type.startsWith("audio/"))
+      ) {
         const url = URL.createObjectURL(file);
         setVideoUrl(url);
         setCurrentTime(0);
@@ -174,7 +179,7 @@ const VideoPlayer: React.FC = () => {
     <div ref={containerRef} className={styles.container}>
       <input
         type="file"
-        accept="video/*"
+        accept="video/*,audio/*"
         style={{ display: "none" }}
         ref={fileInputRef}
         onChange={handleFileChange}
