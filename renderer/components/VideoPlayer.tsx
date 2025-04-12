@@ -4,6 +4,8 @@ import {
   Minimize2,
   Pause,
   Play,
+  SkipBack,
+  SkipForward,
   StopCircle,
   Volume2,
   VolumeX,
@@ -11,6 +13,7 @@ import {
 import React, { useEffect, useRef, useState } from "react";
 import ReactPlayer from "react-player";
 import placeholderImage from "../assets/video-placeholder.png";
+import useKeyboardShortcuts from "../hooks/useKeyboardShortcuts";
 import styles from "../styles/VideoPlayer.module.css";
 
 type VideoItem = {
@@ -32,6 +35,9 @@ const VideoPlayer: React.FC = () => {
   const [muted, setMuted] = useState(false);
   const [playerRef, setPlayerRef] = useState<null | ReactPlayer>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const isAudioFile = (filename: string): boolean =>
+    /\.(mp3|wav|m4a|flac|aac)$/i.test(filename);
   const formatTime = (time: number): string => {
     const minutes = Math.floor(time / 60);
     const seconds = Math.floor(time % 60);
@@ -62,12 +68,53 @@ const VideoPlayer: React.FC = () => {
       setIsPlaying(true);
     }
   };
+  const handleNext = (): void => {
+    if (videoQueue.length > 0) {
+      setCurrentIndex((prev) => {
+        const nextIndex =
+          videoQueue.length === 1 ? 0 : (prev + 1) % videoQueue.length;
+
+        return nextIndex;
+      });
+      currentTimeRef.current = 0;
+      setCurrentTime(0);
+      if (playerRef) playerRef.seekTo(0, "seconds");
+      setDuration(0);
+      setIsPlaying(true);
+    }
+  };
+  const handlePrevious = (): void => {
+    if (videoQueue.length === 1) return;
+
+    if (currentTimeRef.current > 5) {
+      currentTimeRef.current = 0;
+      setCurrentTime(0);
+      playerRef?.seekTo(0, "seconds");
+      setDuration(0);
+      setIsPlaying(true);
+    } else if (videoQueue.length > 1) {
+      setCurrentIndex((prev) => {
+        const prevIndex =
+          videoQueue.length === 1
+            ? 0
+            : (prev - 1 + videoQueue.length) % videoQueue.length;
+
+        return prevIndex;
+      });
+      currentTimeRef.current = 0;
+      setCurrentTime(0);
+      playerRef?.seekTo(0, "seconds");
+      setDuration(0);
+      setIsPlaying(true);
+    }
+  };
 
   useEffect(() => {
     if (videoQueue.length > 0) {
       const { name, url } = videoQueue[currentIndex];
 
       setVideoUrl(url);
+      setCurrentTime(0);
       document.title = name.replace(/\.[^/.]+$/, "") || "Video Player";
     }
   }, [videoQueue, currentIndex]);
@@ -139,131 +186,54 @@ const VideoPlayer: React.FC = () => {
     }
   }, [videoUrl, playerRef]);
 
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent): void => {
-      if (!videoUrl) return;
-
-      switch (e.key) {
-        case " ":
-          e.preventDefault();
-          setIsPlaying((prev) => !prev);
-
-          break;
-        case "s":
-        case "S":
-          e.preventDefault();
-          setIsPlaying(false);
-          currentTimeRef.current = 0;
-          if (playerRef) playerRef.seekTo(0, "seconds");
-
-          break;
-        case "ArrowRight":
-          e.preventDefault();
-
-          if (playerRef) {
-            const newTime = Math.min(currentTimeRef.current + 5, duration);
-
-            playerRef.seekTo(newTime, "seconds");
-            currentTimeRef.current = newTime;
-            forceRender({});
-          }
-
-          break;
-        case "ArrowLeft":
-          e.preventDefault();
-
-          if (playerRef) {
-            const newTime = Math.max(currentTimeRef.current - 5, 0);
-
-            playerRef.seekTo(newTime, "seconds");
-            currentTimeRef.current = newTime;
-            forceRender({});
-          }
-
-          break;
-        case "ArrowUp":
-          e.preventDefault();
-
-          const increasedVol = Math.min(volume + 0.1, 1);
-
-          setVolume(increasedVol);
-          localStorage.setItem("volume", increasedVol.toString());
-
-          break;
-        case "ArrowDown":
-          e.preventDefault();
-
-          const decreasedVol = Math.max(volume - 0.1, 0);
-
-          setVolume(decreasedVol);
-          localStorage.setItem("volume", decreasedVol.toString());
-
-          break;
-        case "m":
-        case "M":
-          e.preventDefault();
-          setMuted((prev) => !prev);
-
-          break;
-        case "f":
-        case "F":
-          e.preventDefault();
-
-          if (document.fullscreenElement) {
-            document.exitFullscreen();
-          } else if (containerRef.current?.requestFullscreen) {
-            containerRef.current.requestFullscreen();
-          }
-
-          break;
-        case "o":
-        case "O":
-          e.preventDefault();
-          fileInputRef.current?.click();
-
-          break;
-        default:
-          if (e.key >= "0" && e.key <= "9") {
-            const percent = parseInt(e.key, 10) * 0.1;
-            const newTime = duration * percent;
-
-            if (playerRef) playerRef.seekTo(newTime, "seconds");
-            currentTimeRef.current = newTime;
-            forceRender({});
-          }
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-
-    return (): void => window.removeEventListener("keydown", handleKeyDown);
-  }, [videoUrl, playerRef, volume, duration]);
+  useKeyboardShortcuts({
+    containerRef,
+    currentTimeRef,
+    duration,
+    fileInputRef,
+    forceRender: () => forceRender({}),
+    playerRef,
+    setCurrentTime,
+    setIsPlaying,
+    setMuted,
+    setVolume,
+    videoUrl,
+    volume,
+  });
 
   useEffect(() => {
     const { ipcRenderer } = window.require("electron");
-    const handleOpenFile = (_: any, filePath: string) => {
+    const handleOpenFile = (_: any, filePaths: string[]) => {
       const fs = window.require("fs");
       const path = window.require("path");
-      const ext = path.extname(filePath).toLowerCase();
-      const mime =
-        ext === ".mp3" || ext === ".m4a" || ext === ".wav"
-          ? "audio/" + ext.slice(1)
-          : "video/" + ext.slice(1);
-      const buffer = fs.readFileSync(filePath);
-      const blob = new Blob([buffer], { type: mime });
-      const url = URL.createObjectURL(blob);
-      const fileName =
-        filePath
-          .split("/")
-          .pop()
-          ?.replace(/\.[^/.]+$/, "") || "Video Player";
+      const items = filePaths
+        .map((filePath) => {
+          const ext = path.extname(filePath).toLowerCase();
+          const mime =
+            ext === ".mp3" || ext === ".m4a" || ext === ".wav"
+              ? "audio/" + ext.slice(1)
+              : "video/" + ext.slice(1);
+          const buffer = fs.readFileSync(filePath);
+          const blob = new Blob([buffer], { type: mime });
+          const url = URL.createObjectURL(blob);
+          const fileName =
+            filePath
+              .split("/")
+              .pop()
+              ?.replace(/\.[^/.]+$/, "") || "Video Player";
 
-      document.title = fileName;
-      setVideoQueue([{ name: fileName, url }]);
-      setCurrentIndex(0);
-      currentTimeRef.current = 0;
-      setDuration(0);
-      setIsPlaying(true);
+          return { name: fileName, url };
+        })
+        .filter(Boolean);
+
+      if (items.length > 0) {
+        document.title = items[0].name;
+        setVideoQueue(items);
+        setCurrentIndex(0);
+        currentTimeRef.current = 0;
+        setDuration(0);
+        setIsPlaying(true);
+      }
     };
 
     ipcRenderer.on("open-file", handleOpenFile);
@@ -288,6 +258,16 @@ const VideoPlayer: React.FC = () => {
           className={styles.playerArea}
           onClick={() => setIsPlaying((prev) => !prev)}
         >
+          {videoQueue[currentIndex] &&
+            isAudioFile(videoQueue[currentIndex].name) && (
+              <div className={styles.placeholder}>
+                <img
+                  alt="placeholder"
+                  className={styles.placeholderImage}
+                  src={placeholderImage}
+                />
+              </div>
+            )}
           <ReactPlayer
             onEnded={() => {
               if (videoQueue.length > 1) {
@@ -297,6 +277,7 @@ const VideoPlayer: React.FC = () => {
             }}
             onProgress={({ playedSeconds }) => {
               currentTimeRef.current = playedSeconds;
+              setCurrentTime(playedSeconds);
               forceRender({});
             }}
             height="100%"
@@ -345,27 +326,45 @@ const VideoPlayer: React.FC = () => {
         >
           <StopCircle size={18} />
         </button>
+        <button
+          className={styles.controlButton}
+          disabled={videoQueue.length === 1}
+          onClick={handlePrevious}
+          title="Previous"
+        >
+          <SkipBack size={18} />
+        </button>
+        <button
+          className={styles.controlButton}
+          onClick={handleNext}
+          title="Next"
+        >
+          <SkipForward size={18} />
+        </button>
         <input
           onChange={(e) => {
             const val = Number(e.target.value);
 
-            if (playerRef) playerRef.seekTo(val, "seconds");
             currentTimeRef.current = val;
-            forceRender({});
+            setCurrentTime(val);
+            playerRef?.seekTo(val, "seconds");
           }}
+          className={styles.input}
           max={duration}
           min={0}
           step={0.1}
           type="range"
-          value={currentTimeRef.current}
+          value={currentTime}
         />
         <input
           onChange={(e) => {
             const vol = Number(e.target.value);
 
+            setMuted(false);
             setVolume(vol);
             localStorage.setItem("volume", vol.toString());
           }}
+          className={styles.input}
           max={1}
           min={0}
           step={0.01}

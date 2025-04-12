@@ -85,11 +85,14 @@ if (fileFromArg) {
 app
   .whenReady()
   .then(() => {
+    const locale = app.getLocale();
+    const isJapanese = /^ja(-|$)/.test(locale);
+
     autoUpdater.checkForUpdatesAndNotify();
 
     const menu = Menu.buildFromTemplate([
       {
-        label: app.name,
+        label: "Mac Classic Player",
         submenu: [
           {
             accelerator: "O",
@@ -99,7 +102,7 @@ app
                 filters: [
                   {
                     extensions: ["mp4", "mp3", "mov", "m4a", "wav"],
-                    name: "Media",
+                    name: isJapanese ? "メディアファイル" : "Media Files",
                   },
                 ],
                 properties: ["openFile", "multiSelections"],
@@ -111,9 +114,14 @@ app
                 win?.webContents.send("open-file", filePaths);
               }
             },
-            label: "ファイルを開く…",
+            label: isJapanese ? "ファイルを開く…" : "Open File…",
           },
-          { label: "Mac Classic Player を終了", role: "quit" },
+          {
+            label: isJapanese
+              ? "Mac Classic Player を終了"
+              : "Quit Mac Classic Player",
+            role: "quit",
+          },
         ],
       },
     ]);
