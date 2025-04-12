@@ -5,7 +5,7 @@ const title = "Mac Classic Player";
 const description =
   "A lightweight, keyboard-friendly media player for macOS — inspired by Media Player Classic.";
 
-export const metadata = {
+export const metadata: Metadata = {
   title,
   description,
   openGraph: {
