@@ -8,6 +8,11 @@
   overflow: hidden;
 }
 
+.container:focus,
+.container:focus-visible {
+  outline: none;
+}
+
 .playerArea {
   background-color: #1a1d23;
   cursor: pointer;
