@@ -12,7 +12,7 @@ type Settings = {
 };
 
 const defaultSettings: Settings = {
-  windowHeight: 600,
+  windowHeight: 450,
   windowWidth: 800,
 };
 const getSettingsPath = (): string => {
@@ -41,6 +41,7 @@ const createWindow = async (): Promise<void> => {
 
   mainWindow = new BrowserWindow({
     height: settings.windowHeight,
+    icon: path.join(__dirname, "../assets/icon.png"),
     webPreferences: {
       contextIsolation: false,
       nodeIntegration: true,

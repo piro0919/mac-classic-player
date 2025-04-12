@@ -50,7 +50,7 @@ npm run start
 
 ## 📸 Preview
 
-![App screenshot](./assets/screenshot.png)
+![App screenshot](./assets/screenshot-empty.png)
 
 ---
 

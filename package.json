@@ -112,6 +112,7 @@
     "build-main": "tsc main/main.ts --outDir dist",
     "codesign": "codesign --deep --force --sign - 'dist/mac-arm64/Mac Classic Player.app'",
     "dev": "npm run start",
+    "dev:lp": "npm --prefix lp run dev",
     "electron": "npm run build-main && electron .",
     "generate-icon": "bash scripts/generate-icon.sh",
     "lint": "npx eslint",
