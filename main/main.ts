@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
+/* eslint-disable @typescript-eslint/no-misused-promises */
 import { app, BrowserWindow, Menu } from "electron";
 import { autoUpdater } from "electron-updater";
 import * as fs from "fs/promises";
@@ -89,6 +91,89 @@ if (fileFromArg) {
   openFilePath = fileFromArg;
 }
 
+const buildMenu = (isJapanese: boolean) =>
+  Menu.buildFromTemplate([
+    {
+      label: "Mac Classic Player",
+      submenu: [
+        {
+          label: isJapanese
+            ? "Mac Classic Player を終了"
+            : "Quit Mac Classic Player",
+          role: "quit",
+        },
+      ],
+    },
+    {
+      label: isJapanese ? "ファイル" : "File",
+      submenu: [
+        {
+          accelerator: "O",
+          click: async () => {
+            const { dialog } = require("electron");
+            const { canceled, filePaths } = await dialog.showOpenDialog({
+              filters: [
+                {
+                  extensions: ["mp4", "mp3", "mov", "m4a", "wav"],
+                  name: isJapanese ? "メディアファイル" : "Media Files",
+                },
+              ],
+              properties: ["openFile", "multiSelections"],
+            });
+
+            if (!canceled && filePaths.length > 0) {
+              const win = BrowserWindow.getAllWindows()[0];
+
+              win?.webContents.send("open-file", filePaths);
+            }
+          },
+          label: isJapanese ? "ファイルを開く…" : "Open File…",
+        },
+      ],
+    },
+    {
+      label: isJapanese ? "ヘルプ" : "Help",
+      submenu: [
+        {
+          accelerator: "?",
+          click: () => {
+            const win = BrowserWindow.getAllWindows()[0];
+
+            win?.webContents.send("toggle-help");
+          },
+          label: isJapanese
+            ? "ショートカット一覧を表示"
+            : "Show Shortcuts Help",
+        },
+        { type: "separator" },
+        {
+          click: () => {
+            const version = app.getVersion();
+            const { dialog } = require("electron");
+
+            dialog.showMessageBox({
+              message: `Mac Classic Player\nv${version}`,
+              title: "Version",
+              type: "info",
+            });
+          },
+          label: isJapanese ? "バージョン情報" : "About Version",
+        },
+        { type: "separator" },
+        {
+          click: () => {
+            const { shell } = require("electron");
+
+            shell.openExternal(
+              "https://github.com/piro0919/mac-classic-player",
+            );
+          },
+          label: "GitHub",
+        },
+      ],
+    },
+  ]);
+
 app
   .whenReady()
   .then(() => {
@@ -97,45 +182,7 @@ app
 
     autoUpdater.checkForUpdatesAndNotify();
 
-    const menu = Menu.buildFromTemplate([
-      {
-        label: "Mac Classic Player",
-        submenu: [
-          {
-            accelerator: "O",
-            // eslint-disable-next-line @typescript-eslint/no-misused-promises
-            click: async () => {
-              // eslint-disable-next-line @typescript-eslint/no-require-imports
-              const { dialog } = require("electron");
-              const { canceled, filePaths } = await dialog.showOpenDialog({
-                filters: [
-                  {
-                    extensions: ["mp4", "mp3", "mov", "m4a", "wav"],
-                    name: isJapanese ? "メディアファイル" : "Media Files",
-                  },
-                ],
-                properties: ["openFile", "multiSelections"],
-              });
-
-              if (!canceled && filePaths.length > 0) {
-                const win = BrowserWindow.getAllWindows()[0];
-
-                win?.webContents.send("open-file", filePaths);
-              }
-            },
-            label: isJapanese ? "ファイルを開く…" : "Open File…",
-          },
-          {
-            label: isJapanese
-              ? "Mac Classic Player を終了"
-              : "Quit Mac Classic Player",
-            role: "quit",
-          },
-        ],
-      },
-    ]);
-
-    Menu.setApplicationMenu(menu);
+    Menu.setApplicationMenu(buildMenu(isJapanese));
     createWindow();
 
     return;

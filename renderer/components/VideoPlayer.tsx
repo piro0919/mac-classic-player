@@ -161,6 +161,19 @@ const VideoPlayer: React.FC = () => {
   }, []);
 
   useEffect(() => {
+    const { ipcRenderer } = window.require("electron");
+    const handleToggleHelp = () => {
+      setShowHelp((prevHelp) => !prevHelp);
+    };
+
+    ipcRenderer.on("toggle-help", handleToggleHelp);
+
+    return () => {
+      ipcRenderer.removeListener("toggle-help", handleToggleHelp);
+    };
+  }, []);
+
+  useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.code.startsWith("Digit") && e.code.length === 6) {
         const num = Number(e.code[5]);
@@ -284,7 +297,7 @@ const VideoPlayer: React.FC = () => {
     ["F", "Toggle Fullscreen"],
     ["O", "Open file dialog"],
     ["0 〜 9", "Seek to % position"],
-    ["?", "Show this help"],
+    ["?", "Show Shortcuts help"],
     ["Esc", "Close this help"],
   ];
 
