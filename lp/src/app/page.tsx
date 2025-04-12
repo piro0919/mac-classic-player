@@ -15,7 +15,7 @@ export default function Home() {
       >
         <Image
           className={styles.logo}
-          src="/screenshot.png"
+          src="/screenshot-empty.png"
           alt="Mac Classic Player UI"
           width={800}
           height={450}
