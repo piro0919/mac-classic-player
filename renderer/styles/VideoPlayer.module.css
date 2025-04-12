@@ -86,6 +86,7 @@
   width: 80px;
 }
 
+/* stylelint-disable-next-line no-descending-specificity */
 .input[type="range"] {
   appearance: none;
   background: #444a55;

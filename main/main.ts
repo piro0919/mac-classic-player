@@ -102,7 +102,9 @@ app
         submenu: [
           {
             accelerator: "O",
+            // eslint-disable-next-line @typescript-eslint/no-misused-promises
             click: async () => {
+              // eslint-disable-next-line @typescript-eslint/no-require-imports
               const { dialog } = require("electron");
               const { canceled, filePaths } = await dialog.showOpenDialog({
                 filters: [

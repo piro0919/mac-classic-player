@@ -29,13 +29,16 @@
     "productName": "Mac Classic Player"
   },
   "dependencies": {
+    "@mantine/hooks": "7.17.4",
     "electron-updater": "6.6.2",
     "lucide-react": "0.487.0",
     "ms": "2.1.3",
     "react": "19.1.0",
     "react-dom": "19.1.0",
+    "react-dropzone": "14.3.8",
     "react-player": "2.16.0",
-    "ress": "5.0.2"
+    "ress": "5.0.2",
+    "use-local-storage-state": "19.5.0"
   },
   "description": "",
   "devDependencies": {
@@ -126,5 +129,5 @@
     "type-check": "tsc --noEmit",
     "zip": "ditto -c -k --sequesterRsrc --keepParent \"dist/mac-arm64/Mac Classic Player.app\" \"dist/Mac Classic Player-${npm_package_version}-mac.zip\""
   },
-  "version": "0.0.11"
+  "version": "0.0.12"
 }

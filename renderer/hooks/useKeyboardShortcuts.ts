@@ -1,23 +1,22 @@
-import { useEffect } from "react";
-import { type ReactPlayerInstance } from "react-player";
+import { type MutableRefObject, type RefObject, useEffect } from "react";
+import type ReactPlayer from "react-player";
 
 type UseKeyboardShortcutsProps = {
-  containerRef: React.RefObject<HTMLDivElement>;
-  currentTimeRef: React.MutableRefObject<number>;
+  currentTimeRef: MutableRefObject<number>;
   duration: number;
-  fileInputRef: React.RefObject<HTMLInputElement>;
+  fileInputRef: RefObject<HTMLInputElement | null>;
   forceRender: () => void;
-  playerRef: null | ReactPlayerInstance;
+  playerRef: null | ReactPlayer;
   setCurrentTime: (v: number) => void;
   setIsPlaying: (v: (prev: boolean) => boolean) => void;
   setMuted: (v: (prev: boolean) => boolean) => void;
   setVolume: (v: number) => void;
+  toggleFullscreen: () => void;
   videoUrl: null | string;
   volume: number;
 };
 
 const useKeyboardShortcuts = ({
-  containerRef,
   currentTimeRef,
   duration,
   fileInputRef,
@@ -27,13 +26,11 @@ const useKeyboardShortcuts = ({
   setIsPlaying,
   setMuted,
   setVolume,
-  videoUrl,
+  toggleFullscreen,
   volume,
 }: UseKeyboardShortcutsProps): void => {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent): void => {
-      if (!videoUrl) return;
-
       switch (e.key) {
         case " ":
           e.preventDefault();
@@ -43,7 +40,7 @@ const useKeyboardShortcuts = ({
         case "s":
         case "S":
           e.preventDefault();
-          setIsPlaying(false);
+          setIsPlaying(() => false);
           currentTimeRef.current = 0;
           playerRef?.seekTo(0, "seconds");
           setCurrentTime(0);
@@ -78,19 +75,19 @@ const useKeyboardShortcuts = ({
         case "ArrowUp":
           e.preventDefault();
 
+          // eslint-disable-next-line no-case-declarations
           const increasedVol = Math.min(volume + 0.05, 1);
 
           setVolume(increasedVol);
-          localStorage.setItem("volume", increasedVol.toString());
 
           break;
         case "ArrowDown":
           e.preventDefault();
 
+          // eslint-disable-next-line no-case-declarations
           const decreasedVol = Math.max(volume - 0.05, 0);
 
           setVolume(decreasedVol);
-          localStorage.setItem("volume", decreasedVol.toString());
 
           break;
         case "m":
@@ -102,12 +99,7 @@ const useKeyboardShortcuts = ({
         case "f":
         case "F":
           e.preventDefault();
-
-          if (document.fullscreenElement) {
-            document.exitFullscreen();
-          } else if (containerRef.current?.requestFullscreen) {
-            containerRef.current.requestFullscreen();
-          }
+          toggleFullscreen();
 
           break;
         case "o":
@@ -133,18 +125,17 @@ const useKeyboardShortcuts = ({
 
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [
-    videoUrl,
     playerRef,
-    volume,
     duration,
-    setVolume,
     setIsPlaying,
     setMuted,
     setCurrentTime,
     currentTimeRef,
     fileInputRef,
-    containerRef,
     forceRender,
+    toggleFullscreen,
+    setVolume,
+    volume,
   ]);
 };
 

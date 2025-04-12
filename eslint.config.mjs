@@ -68,7 +68,7 @@ const eslintConfig = [
           prefer: "type-imports",
         },
       ],
-      "@typescript-eslint/explicit-function-return-type": "error",
+      "@typescript-eslint/explicit-function-return-type": "off",
       "@typescript-eslint/no-misused-promises": "error",
       "@typescript-eslint/no-unused-vars": "error",
       "@typescript-eslint/promise-function-async": "error",

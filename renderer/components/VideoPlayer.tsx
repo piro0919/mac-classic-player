@@ -1,4 +1,5 @@
 import useKeyboardShortcuts from "@/hooks/useKeyboardShortcuts";
+import { useFullscreen } from "@mantine/hooks";
 import {
   FileMusic,
   Maximize2,
@@ -13,6 +14,7 @@ import {
 } from "lucide-react";
 import React, { useEffect, useRef, useState } from "react";
 import ReactPlayer from "react-player";
+import useLocalStorageState from "use-local-storage-state";
 import placeholderImage from "../assets/video-placeholder.png";
 import styles from "../styles/VideoPlayer.module.css";
 
@@ -23,19 +25,24 @@ type VideoItem = {
 
 const VideoPlayer: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
   const [videoQueue, setVideoQueue] = useState<VideoItem[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [videoUrl, setVideoUrl] = useState<null | string>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const currentTimeRef = useRef(0);
   const [, forceRender] = useState({});
-  const [volume, setVolume] = useState(1);
+  const [volume, setVolume] = useLocalStorageState("volume", {
+    defaultValue: 1,
+  });
   const [duration, setDuration] = useState(0);
   const [muted, setMuted] = useState(false);
   const [playerRef, setPlayerRef] = useState<null | ReactPlayer>(null);
-  const [isFullscreen, setIsFullscreen] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
+  const {
+    fullscreen: isFullscreen,
+    ref: fullscreenRef,
+    toggle: toggleFullscreen,
+  } = useFullscreen();
   const isAudioFile = (filename: string): boolean =>
     /\.(mp3|wav|m4a|flac|aac)$/i.test(filename);
   const formatTime = (time: number): string => {
@@ -111,6 +118,7 @@ const VideoPlayer: React.FC = () => {
 
   useEffect(() => {
     if (videoQueue.length > 0) {
+      // eslint-disable-next-line security/detect-object-injection
       const { name, url } = videoQueue[currentIndex];
 
       setVideoUrl(url);
@@ -119,75 +127,7 @@ const VideoPlayer: React.FC = () => {
     }
   }, [videoQueue, currentIndex]);
 
-  useEffect(() => {
-    const savedVolume = localStorage.getItem("volume");
-
-    if (savedVolume) {
-      const parsed = parseFloat(savedVolume);
-
-      setVolume(parsed);
-    }
-  }, []);
-
-  useEffect(() => {
-    const handleFullscreenChange = (): void => {
-      setIsFullscreen(!!document.fullscreenElement);
-    };
-
-    document.addEventListener("fullscreenchange", handleFullscreenChange);
-
-    return (): void => {
-      document.removeEventListener("fullscreenchange", handleFullscreenChange);
-    };
-  }, []);
-
-  useEffect(() => {
-    const handleDrop = (e: DragEvent): void => {
-      e.preventDefault();
-
-      const files = Array.from(e.dataTransfer?.files || []);
-      const urls = files
-        .filter(
-          (file) =>
-            file.type.startsWith("video/") || file.type.startsWith("audio/"),
-        )
-        .map((file) => {
-          const url = URL.createObjectURL(file);
-
-          return { name: file.name, url };
-        });
-
-      if (urls.length > 0) {
-        setVideoQueue(urls);
-        setCurrentIndex(0);
-        currentTimeRef.current = 0;
-        setDuration(0);
-        document.title = urls[0].name.replace(/\.[^/.]+$/, "");
-        setIsPlaying(true);
-      }
-    };
-    const handleDragOver = (e: DragEvent): void => {
-      e.preventDefault();
-    };
-
-    window.addEventListener("drop", handleDrop);
-    window.addEventListener("dragover", handleDragOver);
-
-    return (): void => {
-      window.removeEventListener("drop", handleDrop);
-      window.removeEventListener("dragover", handleDragOver);
-    };
-  }, []);
-
-  useEffect(() => {
-    if (videoUrl && playerRef) {
-      currentTimeRef.current = 0;
-      playerRef.seekTo(0, "seconds");
-    }
-  }, [videoUrl, playerRef]);
-
   useKeyboardShortcuts({
-    containerRef,
     currentTimeRef,
     duration,
     fileInputRef,
@@ -197,12 +137,15 @@ const VideoPlayer: React.FC = () => {
     setIsPlaying,
     setMuted,
     setVolume,
+    // eslint-disable-next-line @typescript-eslint/no-misused-promises
+    toggleFullscreen,
     videoUrl,
     volume,
   });
 
   useEffect(() => {
     const { ipcRenderer } = window.require("electron");
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const handleOpenFile = (_: any, filePaths: string[]) => {
       const fs = window.require("fs");
       const path = window.require("path");
@@ -216,11 +159,7 @@ const VideoPlayer: React.FC = () => {
           const buffer = fs.readFileSync(filePath);
           const blob = new Blob([buffer], { type: mime });
           const url = URL.createObjectURL(blob);
-          const fileName =
-            filePath
-              .split("/")
-              .pop()
-              ?.replace(/\.[^/.]+$/, "") || "Video Player";
+          const fileName = filePath.split("/").pop() || "Video Player";
 
           return { name: fileName, url };
         })
@@ -244,7 +183,7 @@ const VideoPlayer: React.FC = () => {
   }, []);
 
   return (
-    <div className={styles.container} ref={containerRef}>
+    <div className={styles.container} ref={fullscreenRef}>
       <input
         accept="video/*,audio/*"
         multiple={true}
@@ -258,12 +197,16 @@ const VideoPlayer: React.FC = () => {
           className={styles.playerArea}
           onClick={() => setIsPlaying((prev) => !prev)}
         >
-          {videoQueue[currentIndex] &&
-            isAudioFile(videoQueue[currentIndex].name) && (
-              <div className={styles.placeholder}>
-                <FileMusic className={styles.fileMusicIcon} size={120} />
-              </div>
-            )}
+          {
+            // eslint-disable-next-line security/detect-object-injection
+            videoQueue[currentIndex] &&
+              // eslint-disable-next-line security/detect-object-injection
+              isAudioFile(videoQueue[currentIndex].name) && (
+                <div className={styles.placeholder}>
+                  <FileMusic className={styles.fileMusicIcon} size={120} />
+                </div>
+              )
+          }
           <ReactPlayer
             onEnded={() => {
               if (videoQueue.length > 1) {
@@ -316,6 +259,7 @@ const VideoPlayer: React.FC = () => {
             setIsPlaying(false);
             currentTimeRef.current = 0;
             if (playerRef) playerRef.seekTo(0, "seconds");
+            setCurrentTime(0);
             forceRender({});
           }}
           className={styles.controlButton}
@@ -374,12 +318,9 @@ const VideoPlayer: React.FC = () => {
           {muted ? <VolumeX size={18} /> : <Volume2 size={18} />}
         </button>
         <button
-          onClick={() => {
-            if (document.fullscreenElement) {
-              document.exitFullscreen();
-            } else if (containerRef.current?.requestFullscreen) {
-              containerRef.current.requestFullscreen();
-            }
+          // eslint-disable-next-line @typescript-eslint/no-misused-promises
+          onClick={async () => {
+            await toggleFullscreen();
           }}
           className={styles.controlButton}
         >
