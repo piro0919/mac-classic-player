@@ -129,5 +129,5 @@
     "type-check": "tsc --noEmit",
     "zip": "ditto -c -k --sequesterRsrc --keepParent \"dist/mac-arm64/Mac Classic Player.app\" \"dist/Mac Classic Player-${npm_package_version}-mac.zip\""
   },
-  "version": "0.0.12"
+  "version": "0.0.13"
 }

@@ -1,3 +1,4 @@
+/* eslint-disable security/detect-object-injection */
 import { initialState, videoQueueReducer } from "@/store/videoQueueReducer";
 import { extractVideoItemsFromDrop } from "@/utils/fileUtils";
 import { useFullscreen } from "@mantine/hooks";
@@ -14,11 +15,13 @@ import {
   VolumeX,
 } from "lucide-react";
 import React, {
+  Fragment,
   useCallback,
   useEffect,
   useMemo,
   useReducer,
   useRef,
+  useState,
 } from "react";
 import ReactPlayer from "react-player";
 import useLocalStorageState from "use-local-storage-state";
@@ -33,6 +36,7 @@ const VideoPlayer: React.FC = () => {
   const [volume, setVolume] = useLocalStorageState("volume", {
     defaultValue: 1,
   });
+  const [showHelp, setShowHelp] = useState(false);
   const {
     currentIndex,
     currentTime,
@@ -158,12 +162,27 @@ const VideoPlayer: React.FC = () => {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (/^Digit[0-9]$/.test(e.code)) {
+      if (e.code.startsWith("Digit") && e.code.length === 6) {
+        const num = Number(e.code[5]);
+
+        if (!isNaN(num)) {
+          e.preventDefault();
+          seekToTime(duration * num * 0.1);
+
+          return;
+        }
+      }
+
+      if (e.code === "Slash" && e.shiftKey) {
         e.preventDefault();
+        setShowHelp((prev) => !prev);
 
-        const num = Number(e.code.replace("Digit", ""));
+        return;
+      }
 
-        seekToTime(duration * num * 0.1);
+      if (e.code === "Escape" && showHelp) {
+        e.preventDefault();
+        setShowHelp(false);
 
         return;
       }
@@ -252,7 +271,22 @@ const VideoPlayer: React.FC = () => {
     seekToTime,
     setVolume,
     toggleFullscreen,
+    showHelp,
   ]);
+
+  const shortcuts = [
+    ["Space", "Play / Pause"],
+    ["S", "Stop"],
+    ["A / D", "Previous / Next file"],
+    ["← / →", "Seek -/+5s"],
+    ["↑ / ↓", "Volume -/+"],
+    ["M", "Mute / Unmute"],
+    ["F", "Toggle Fullscreen"],
+    ["O", "Open file dialog"],
+    ["0 〜 9", "Seek to % position"],
+    ["?", "Show this help"],
+    ["Esc", "Close this help"],
+  ];
 
   return (
     <div className={styles.container} ref={fullscreenRef}>
@@ -384,6 +418,9 @@ const VideoPlayer: React.FC = () => {
           type="range"
           value={currentTime}
         />
+        <p className={styles.timeInfo}>
+          {formatTime(currentTime)} / {formatTime(duration)}
+        </p>
         <input
           onChange={(e) => {
             const vol = Number(e.target.value);
@@ -413,10 +450,24 @@ const VideoPlayer: React.FC = () => {
         >
           {isFullscreen ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
         </button>
-        <p className={styles.timeInfo}>
-          {formatTime(currentTime)} / {formatTime(duration)}
-        </p>
       </div>
+      {showHelp && (
+        <div className={styles.overlay} onClick={() => setShowHelp(false)}>
+          <div className={styles.helpBox}>
+            <h2>Keyboard Shortcuts</h2>
+            <dl className={styles.list}>
+              {shortcuts.map(([key, desc]) => (
+                <Fragment key={key}>
+                  <dt>
+                    <span className={styles.key}>{key}</span>
+                  </dt>
+                  <dd>{desc}</dd>
+                </Fragment>
+              ))}
+            </dl>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
