@@ -126,3 +126,7 @@
   height: auto;
   width: 120px;
 }
+
+.fileMusicIcon {
+  opacity: 0.5;
+}

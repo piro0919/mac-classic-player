@@ -4,6 +4,7 @@ import * as fs from "fs/promises";
 import * as path from "path";
 
 let openFilePath: null | string = null;
+let mainWindow: BrowserWindow | null = null;
 
 type Settings = {
   windowHeight: number;
@@ -37,7 +38,8 @@ const saveSettings = async (settings: Settings) => {
 };
 const createWindow = async (): Promise<void> => {
   const settings = await loadSettings();
-  const win = new BrowserWindow({
+
+  mainWindow = new BrowserWindow({
     height: settings.windowHeight,
     webPreferences: {
       contextIsolation: false,
@@ -46,8 +48,8 @@ const createWindow = async (): Promise<void> => {
     width: settings.windowWidth,
   });
 
-  win.on("resize", () => {
-    const [width, height] = win.getSize();
+  mainWindow.on("resize", () => {
+    const [width, height] = mainWindow!.getSize();
 
     saveSettings({ windowHeight: height, windowWidth: width });
   });
@@ -57,22 +59,26 @@ const createWindow = async (): Promise<void> => {
     ? "http://localhost:5173"
     : `file://${encodeURI(path.resolve(__dirname, "../dist/index.html"))}`;
 
-  win.loadURL(url);
+  mainWindow.loadURL(url);
 
-  win.webContents.once("did-finish-load", () => {
+  mainWindow.webContents.once("did-finish-load", () => {
     if (openFilePath) {
-      win.webContents.send("open-file", openFilePath);
+      mainWindow?.webContents.send("open-file", [openFilePath]);
     }
   });
 
   if (isDev) {
-    win.webContents.openDevTools({ mode: "detach" });
+    mainWindow.webContents.openDevTools({ mode: "detach" });
   }
 };
 
 app.on("open-file", (event, path) => {
   event.preventDefault();
   openFilePath = path;
+
+  if (mainWindow?.webContents) {
+    mainWindow.webContents.send("open-file", [openFilePath]);
+  }
 });
 
 const args = process.argv;

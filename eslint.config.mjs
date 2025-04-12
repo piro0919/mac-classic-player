@@ -77,7 +77,7 @@ const eslintConfig = [
       "css-modules/no-undef-class": [2, { camelCase: true }],
       "ext/lines-between-object-properties": ["error", "never"],
       "filenames/match-exported": ["error", ["camel", "kebab", "pascal"]],
-      "filenames/match-regex": "error",
+      "filenames/match-regex": "off",
       "filenames/no-index": "off",
       "import/newline-after-import": ["error", { count: 1 }],
       "import/order": "off",

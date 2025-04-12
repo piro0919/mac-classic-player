@@ -1,5 +1,6 @@
-// eslint-disable-next-line filenames/match-regex
+import useKeyboardShortcuts from "@/hooks/useKeyboardShortcuts";
 import {
+  FileMusic,
   Maximize2,
   Minimize2,
   Pause,
@@ -13,7 +14,6 @@ import {
 import React, { useEffect, useRef, useState } from "react";
 import ReactPlayer from "react-player";
 import placeholderImage from "../assets/video-placeholder.png";
-import useKeyboardShortcuts from "../hooks/useKeyboardShortcuts";
 import styles from "../styles/VideoPlayer.module.css";
 
 type VideoItem = {
@@ -261,11 +261,7 @@ const VideoPlayer: React.FC = () => {
           {videoQueue[currentIndex] &&
             isAudioFile(videoQueue[currentIndex].name) && (
               <div className={styles.placeholder}>
-                <img
-                  alt="placeholder"
-                  className={styles.placeholderImage}
-                  src={placeholderImage}
-                />
+                <FileMusic className={styles.fileMusicIcon} size={120} />
               </div>
             )}
           <ReactPlayer
