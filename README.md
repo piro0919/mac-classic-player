@@ -1,4 +1,4 @@
-# 🎬 Mac Classic Player
+# <img src="./assets/icon.png" alt="App icon" width="32" style="vertical-align: middle; margin-right: 8px;" /> Mac Classic Player
 
 > A lightweight, keyboard-friendly media player for macOS — inspired by Media Player Classic. This player offers a rich set of keyboard shortcuts for enhanced control and accessibility.
 
@@ -50,7 +50,16 @@ npm run start
 
 ## 📸 Preview
 
-![App screenshot](./assets/screenshot-empty.png)
+<table align="center">
+  <tr>
+    <td><img src="./assets/screenshot-main.png" alt="Screenshot: video playing" width="300" /></td>
+    <td><img src="./assets/screenshot-shortcuts.png" alt="Screenshot: shortcuts overlay" width="300" /></td>
+  </tr>
+  <tr>
+    <td><img src="./assets/screenshot-audio.png" alt="Screenshot: audio file playback" width="300" /></td>
+    <td><img src="./assets/screenshot-empty.png" alt="Screenshot: empty startup" width="300" /></td>
+  </tr>
+</table>
 
 ---
 
