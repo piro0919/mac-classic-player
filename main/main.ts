@@ -8,7 +8,9 @@ import { autoUpdater } from "electron-updater";
 import * as fs from "fs/promises";
 import * as path from "path";
 
-const openFilePaths: string[] = [];
+let openFilePath: string;
+// グローバル変数としてメインウィンドウ参照を保持
+let mainWindow: BrowserWindow | null = null;
 
 type Settings = {
   windowHeight: number;
@@ -52,6 +54,14 @@ const createWindow = async (): Promise<BrowserWindow> => {
     width: settings.windowWidth,
   });
 
+  // グローバル変数に保存
+  mainWindow = win;
+
+  // ウィンドウが閉じられたときにnullに設定
+  win.on("closed", () => {
+    mainWindow = null;
+  });
+
   win.on("resize", () => {
     const [width, height] = win.getSize();
 
@@ -66,8 +76,8 @@ const createWindow = async (): Promise<BrowserWindow> => {
   win.loadURL(url);
 
   win.webContents.once("did-finish-load", () => {
-    if (openFilePaths.length > 0) {
-      win.webContents.send("open-file", openFilePaths);
+    if (openFilePath) {
+      win.webContents.send("open-file", [openFilePath]);
     }
   });
 
@@ -87,7 +97,7 @@ const checkFileFromCommandLine = (): void => {
   const fileFromArg = args.find((arg) => fileRegex.test(arg));
 
   if (fileFromArg) {
-    openFilePaths.push(fileFromArg);
+    openFilePath = fileFromArg;
   }
 };
 /**
@@ -180,7 +190,15 @@ const buildMenu = (isJapanese: boolean, mainWindow: BrowserWindow) => {
 app.on("open-file", (event, path) => {
   event.preventDefault();
   console.log("open-file イベント発生:", path);
-  openFilePaths.push(path);
+
+  // 既にウィンドウがあり、ロード完了していれば即座に送信
+  if (mainWindow && !mainWindow.webContents.isLoading()) {
+    console.log("既存ウィンドウに直接ファイルを送信:", path);
+    mainWindow.webContents.send("open-file", [path]);
+  } else {
+    // ウィンドウがない、またはロード中の場合は配列に追加
+    openFilePath = path;
+  }
 });
 
 app.whenReady().then(async () => {
