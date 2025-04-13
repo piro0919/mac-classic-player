@@ -18,7 +18,7 @@ const SUPPORTED_EXTENSIONS = ["mp4", "mp3", "mov", "m4a", "wav"];
 
 // グローバル変数
 let mainWindow: BrowserWindow | null = null;
-let openFilePath: null | string = null;
+let openFilePaths: string[] = [];
 
 /**
  * 設定ファイルのパスを取得
@@ -93,8 +93,9 @@ const createWindow = async (): Promise<void> => {
 
     // ウェブコンテンツのロードが完了したら、ファイルを開く
     mainWindow.webContents.once("did-finish-load", () => {
-      if (openFilePath && mainWindow) {
-        mainWindow.webContents.send("open-file", [openFilePath]);
+      if (openFilePaths.length > 0 && mainWindow) {
+        mainWindow.webContents.send("open-file", openFilePaths);
+        openFilePaths = [];
       }
     });
 
@@ -200,7 +201,7 @@ const checkFileFromCommandLine = (): void => {
   const fileFromArg = args.find((arg) => fileRegex.test(arg));
 
   if (fileFromArg) {
-    openFilePath = fileFromArg;
+    openFilePaths.push(fileFromArg);
   }
 };
 // アプリケーションの初期化
@@ -225,10 +226,11 @@ const initializeApp = async (): Promise<void> => {
 // ファイルを開くイベント（macOS）
 app.on("open-file", (event, path) => {
   event.preventDefault();
-  openFilePath = path;
+  openFilePaths.push(path);
 
-  if (mainWindow?.webContents) {
-    mainWindow.webContents.send("open-file", [openFilePath]);
+  if (mainWindow?.webContents?.isLoading() === false) {
+    mainWindow.webContents.send("open-file", openFilePaths);
+    openFilePaths = [];
   }
 });
 

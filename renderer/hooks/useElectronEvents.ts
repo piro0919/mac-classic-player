@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { type VideoQueueAction } from "../store/videoQueueReducer";
 
 export const useElectronEvents = (
@@ -6,7 +6,7 @@ export const useElectronEvents = (
   seekToTime: (time: number) => void,
   setShowHelp: React.Dispatch<React.SetStateAction<boolean>>,
 ) => {
-  let ignoreNextOpenFile = false;
+  const ignoreNextOpenFileRef = useRef(false);
 
   // ファイルオープンイベントのハンドリング
   useEffect(() => {
@@ -20,8 +20,9 @@ export const useElectronEvents = (
     const { ipcRenderer } = window.require("electron");
     // ファイルオープンハンドラー
     const handleOpenFile = async (_: any, filePaths: string[]) => {
-      if (ignoreNextOpenFile) {
-        ignoreNextOpenFile = false;
+      if (ignoreNextOpenFileRef.current) {
+        console.log("🚫 suppressing open-file");
+        ignoreNextOpenFileRef.current = false;
 
         return;
       }
@@ -67,16 +68,13 @@ export const useElectronEvents = (
 
     ipcRenderer.on("open-file", handleOpenFile);
     ipcRenderer.on("suppress-next-open-file", () => {
-      ignoreNextOpenFile = true;
+      ignoreNextOpenFileRef.current = true;
     });
 
     return () => {
       ipcRenderer.removeListener("open-file", handleOpenFile);
-      ipcRenderer.removeListener("suppress-next-open-file", () => {
-        ignoreNextOpenFile = true;
-      });
     };
-  }, []);
+  }, [dispatch]);
 
   // ヘルプトグルイベントのハンドリング
   useEffect(() => {
