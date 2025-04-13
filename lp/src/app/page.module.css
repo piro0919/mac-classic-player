@@ -67,6 +67,10 @@
     padding: 0;
   }
 
+  .features li {
+    list-style-type: none;
+  }
+
   .footer {
     color: #666;
     display: flex;

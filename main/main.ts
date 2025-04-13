@@ -1,98 +1,118 @@
-/* eslint-disable @typescript-eslint/no-require-imports */
-/* eslint-disable @typescript-eslint/no-misused-promises */
-import { app, BrowserWindow, Menu } from "electron";
+import { app, BrowserWindow, dialog, Menu, shell } from "electron";
 import { autoUpdater } from "electron-updater";
 import * as fs from "fs/promises";
 import * as path from "path";
 
-let openFilePath: null | string = null;
-let mainWindow: BrowserWindow | null = null;
-
+// 型定義
 type Settings = {
   windowHeight: number;
   windowWidth: number;
 };
 
-const defaultSettings: Settings = {
+// 定数
+const DEFAULT_SETTINGS: Settings = {
   windowHeight: 450,
   windowWidth: 800,
 };
+const SUPPORTED_EXTENSIONS = ["mp4", "mp3", "mov", "m4a", "wav"];
+
+// グローバル変数
+let mainWindow: BrowserWindow | null = null;
+let openFilePath: null | string = null;
+
+/**
+ * 設定ファイルのパスを取得
+ */
 const getSettingsPath = (): string => {
   return path.join(app.getPath("userData"), "settings.json");
 };
+/**
+ * 設定を読み込む
+ */
 const loadSettings = async (): Promise<Settings> => {
   try {
-    // eslint-disable-next-line security/detect-non-literal-fs-filename
     const raw = await fs.readFile(getSettingsPath(), "utf-8");
 
-    return JSON.parse(raw);
-  } catch {
-    return defaultSettings;
+    return JSON.parse(raw) as Settings;
+  } catch (error) {
+    console.log("Settings file not found, using defaults:", error);
+
+    return DEFAULT_SETTINGS;
   }
 };
-const saveSettings = async (settings: Settings) => {
-  // eslint-disable-next-line security/detect-non-literal-fs-filename
-  await fs.writeFile(
-    getSettingsPath(),
-    JSON.stringify(settings, null, 2),
-    "utf-8",
-  );
+/**
+ * 設定を保存
+ */
+const saveSettings = async (settings: Settings): Promise<void> => {
+  try {
+    await fs.writeFile(
+      getSettingsPath(),
+      JSON.stringify(settings, null, 2),
+      "utf-8",
+    );
+  } catch (error) {
+    console.error("Failed to save settings:", error);
+  }
 };
+/**
+ * メインウィンドウを作成
+ */
 const createWindow = async (): Promise<void> => {
-  const settings = await loadSettings();
+  try {
+    const settings = await loadSettings();
 
-  mainWindow = new BrowserWindow({
-    height: settings.windowHeight,
-    icon: path.join(__dirname, "../assets/icon.png"),
-    webPreferences: {
-      contextIsolation: false,
-      nodeIntegration: true,
-    },
-    width: settings.windowWidth,
-  });
+    mainWindow = new BrowserWindow({
+      height: settings.windowHeight,
+      icon: path.join(__dirname, "../assets/icon.png"),
+      webPreferences: {
+        // セキュリティ上の理由からcontextIsolationをtrueにすることが推奨されるが、
+        // 現状の仕様を維持するためfalseに設定
+        contextIsolation: false,
+        nodeIntegration: true,
+      },
+      width: settings.windowWidth,
+    });
 
-  mainWindow.on("resize", () => {
-    const [width, height] = mainWindow!.getSize();
+    // ウィンドウサイズ変更時に設定を保存
+    mainWindow.on("resize", () => {
+      if (!mainWindow) return;
 
-    saveSettings({ windowHeight: height, windowWidth: width });
-  });
+      const [width, height] = mainWindow.getSize();
 
-  const isDev = !app.isPackaged;
-  const url = isDev
-    ? "http://localhost:5173"
-    : `file://${encodeURI(path.resolve(__dirname, "../dist/index.html"))}`;
+      void saveSettings({ windowHeight: height, windowWidth: width });
+    });
 
-  mainWindow.loadURL(url);
+    // アプリが開発モードか本番モードかを判定
+    const isDev = !app.isPackaged;
+    const url = isDev
+      ? "http://localhost:5173"
+      : `file://${encodeURI(path.resolve(__dirname, "../dist/index.html"))}`;
 
-  mainWindow.webContents.once("did-finish-load", () => {
-    if (openFilePath) {
-      mainWindow?.webContents.send("open-file", [openFilePath]);
+    // URLをロード
+    await mainWindow.loadURL(url);
+
+    // ウェブコンテンツのロードが完了したら、ファイルを開く
+    mainWindow.webContents.once("did-finish-load", () => {
+      if (openFilePath && mainWindow) {
+        mainWindow.webContents.send("open-file", [openFilePath]);
+      }
+    });
+
+    // 開発モードの場合、開発者ツールを開く
+    if (isDev) {
+      mainWindow.webContents.openDevTools({ mode: "detach" });
     }
-  });
-
-  if (isDev) {
-    mainWindow.webContents.openDevTools({ mode: "detach" });
+  } catch (error) {
+    console.error("Failed to create window:", error);
   }
 };
+/**
+ * メニューを構築
+ */
+const buildMenu = (isJapanese: boolean) => {
+  const mediaFilesFilterName = isJapanese ? "メディアファイル" : "Media Files";
 
-app.on("open-file", (event, path) => {
-  event.preventDefault();
-  openFilePath = path;
-
-  if (mainWindow?.webContents) {
-    mainWindow.webContents.send("open-file", [openFilePath]);
-  }
-});
-
-const args = process.argv;
-const fileFromArg = args.find((arg) => /\.(mp4|mp3|mov|m4a|wav)$/i.test(arg));
-
-if (fileFromArg) {
-  openFilePath = fileFromArg;
-}
-
-const buildMenu = (isJapanese: boolean) =>
-  Menu.buildFromTemplate([
+  return Menu.buildFromTemplate([
     {
       label: "Mac Classic Player",
       submenu: [
@@ -110,21 +130,22 @@ const buildMenu = (isJapanese: boolean) =>
         {
           accelerator: "O",
           click: async () => {
-            const { dialog } = require("electron");
-            const { canceled, filePaths } = await dialog.showOpenDialog({
-              filters: [
-                {
-                  extensions: ["mp4", "mp3", "mov", "m4a", "wav"],
-                  name: isJapanese ? "メディアファイル" : "Media Files",
-                },
-              ],
-              properties: ["openFile", "multiSelections"],
-            });
+            try {
+              const { canceled, filePaths } = await dialog.showOpenDialog({
+                filters: [
+                  {
+                    extensions: SUPPORTED_EXTENSIONS,
+                    name: mediaFilesFilterName,
+                  },
+                ],
+                properties: ["openFile", "multiSelections"],
+              });
 
-            if (!canceled && filePaths.length > 0) {
-              const win = BrowserWindow.getAllWindows()[0];
-
-              win?.webContents.send("open-file", filePaths);
+              if (!canceled && filePaths.length > 0 && mainWindow) {
+                mainWindow.webContents.send("open-file", filePaths);
+              }
+            } catch (error) {
+              console.error("Error opening file dialog:", error);
             }
           },
           label: isJapanese ? "ファイルを開く…" : "Open File…",
@@ -137,9 +158,8 @@ const buildMenu = (isJapanese: boolean) =>
         {
           accelerator: "?",
           click: () => {
-            const win = BrowserWindow.getAllWindows()[0];
-
-            win?.webContents.send("toggle-help");
+            if (!mainWindow) return;
+            mainWindow.webContents.send("toggle-help");
           },
           label: isJapanese
             ? "ショートカット一覧を表示"
@@ -149,7 +169,6 @@ const buildMenu = (isJapanese: boolean) =>
         {
           click: () => {
             const version = app.getVersion();
-            const { dialog } = require("electron");
 
             dialog.showMessageBox({
               message: `Mac Classic Player\nv${version}`,
@@ -162,9 +181,7 @@ const buildMenu = (isJapanese: boolean) =>
         { type: "separator" },
         {
           click: () => {
-            const { shell } = require("electron");
-
-            shell.openExternal(
+            void shell.openExternal(
               "https://github.com/piro0919/mac-classic-player",
             );
           },
@@ -173,18 +190,70 @@ const buildMenu = (isJapanese: boolean) =>
       ],
     },
   ]);
+};
+/**
+ * コマンドライン引数からファイルを検出
+ */
+const checkFileFromCommandLine = (): void => {
+  const args = process.argv;
+  const fileRegex = new RegExp(`\\.(${SUPPORTED_EXTENSIONS.join("|")})$`, "i");
+  const fileFromArg = args.find((arg) => fileRegex.test(arg));
 
-app
-  .whenReady()
-  .then(() => {
+  if (fileFromArg) {
+    openFilePath = fileFromArg;
+  }
+};
+// アプリケーションの初期化
+const initializeApp = async (): Promise<void> => {
+  try {
     const locale = app.getLocale();
     const isJapanese = /^ja(-|$)/.test(locale);
 
-    autoUpdater.checkForUpdatesAndNotify();
+    // アップデートの確認
+    void autoUpdater.checkForUpdatesAndNotify();
 
+    // メニューの設定
     Menu.setApplicationMenu(buildMenu(isJapanese));
-    createWindow();
 
-    return;
+    // ウィンドウ作成
+    await createWindow();
+  } catch (error) {
+    console.error("Failed to initialize app:", error);
+  }
+};
+
+// ファイルを開くイベント（macOS）
+app.on("open-file", (event, path) => {
+  event.preventDefault();
+  openFilePath = path;
+
+  if (mainWindow?.webContents) {
+    mainWindow.webContents.send("open-file", [openFilePath]);
+  }
+});
+
+// アプリケーションの準備ができたら実行
+app
+  .whenReady()
+  .then(async () => {
+    checkFileFromCommandLine();
+
+    return initializeApp();
   })
-  .catch(() => {});
+  .catch((error) => {
+    console.error("Application initialization failed:", error);
+  });
+
+// 全てのウィンドウが閉じられたときにアプリケーションを終了（macOS以外）
+app.on("window-all-closed", () => {
+  if (process.platform !== "darwin") {
+    app.quit();
+  }
+});
+
+// アプリがアクティブになったとき（macOS）
+app.on("activate", () => {
+  if (BrowserWindow.getAllWindows().length === 0) {
+    void createWindow();
+  }
+});

@@ -29,6 +29,7 @@
 | 💾 Persistent state        | Volume & window size remembered       |
 | 🎵 Audio support           | Supports `.mp3`, `.m4a`, `.wav`, etc. |
 | ❓ Keyboard Shortcuts Help | `?` key to toggle overlay             |
+| 🧾 Track Info Overlay      | `i` key or button to toggle metadata  |
 | 🔢 Percentage Seek         | `0`–`9` keys to jump to 0%–90%        |
 
 ---
@@ -53,11 +54,16 @@ npm run start
 <table align="center">
   <tr>
     <td><img src="./assets/screenshot-main.png" alt="Screenshot: video playing" width="300" /></td>
-    <td><img src="./assets/screenshot-shortcuts.png" alt="Screenshot: shortcuts overlay" width="300" /></td>
+    <td><img src="./assets/screenshot-audio.png" alt="Screenshot: audio file playback" width="300" /></td>
   </tr>
   <tr>
-    <td><img src="./assets/screenshot-audio.png" alt="Screenshot: audio file playback" width="300" /></td>
-    <td><img src="./assets/screenshot-empty.png" alt="Screenshot: empty startup" width="300" /></td>
+      <td><img src="./assets/screenshot-shortcuts.png" alt="Screenshot: shortcuts overlay" width="300" /></td>
+<td><img src="./assets/screenshot-empty.png" alt="Screenshot: empty startup" width="300" /></td>
+</tr>
+<tr>
+  <td><img src="./assets/screenshot-info.png" alt="Screenshot: track info overlay" width="300" /></td>
+  <td>
+  </td>
   </tr>
 </table>
 

@@ -41,6 +41,7 @@ export default function Home() {
           <li>🖱 Drag & Drop or one-click file loading</li>
           <li>💾 Persistent volume & window size</li>
           <li>🎵 Supports video and audio formats</li>
+          <li>🧾 View track metadata overlay</li>
         </ul>
         <div className={styles.cta}>
           <a
@@ -107,15 +108,13 @@ export default function Home() {
             transition={{ duration: 0.5 }}
             viewport={{ once: true }}
           >
-            <h3>Shortcut Overlay</h3>
-            <p>
-              Press <code>?</code> to see all keyboard shortcuts instantly.
-            </p>
+            <h3>Audio Mode</h3>
+            <p>Perfect for playing audio-only files. No distractions.</p>
           </motion.div>
           <Image
             className={styles.screenshotImage}
-            src="/screenshot-shortcuts.png"
-            alt="Shortcut overlay"
+            src="/screenshot-audio.png"
+            alt="Audio mode"
             width={600}
             height={338}
           />
@@ -123,8 +122,8 @@ export default function Home() {
         <div className={styles.screenshotRow}>
           <Image
             className={styles.screenshotImage}
-            src="/screenshot-audio.png"
-            alt="Audio mode"
+            src="/screenshot-shortcuts.png"
+            alt="Shortcut overlay"
             width={600}
             height={338}
           />
@@ -135,8 +134,10 @@ export default function Home() {
             transition={{ duration: 0.5 }}
             viewport={{ once: true }}
           >
-            <h3>Audio Mode</h3>
-            <p>Perfect for playing audio-only files. No distractions.</p>
+            <h3>Shortcut Overlay</h3>
+            <p>
+              Press <code>?</code> to see all keyboard shortcuts instantly.
+            </p>
           </motion.div>
         </div>
         <div className={styles.screenshotRow}>
@@ -157,6 +158,28 @@ export default function Home() {
             width={600}
             height={338}
           />
+        </div>
+        <div className={styles.screenshotRow}>
+          <Image
+            className={styles.screenshotImage}
+            src="/screenshot-info.png"
+            alt="Track info overlay"
+            width={600}
+            height={338}
+          />
+          <motion.div
+            className={styles.screenshotText}
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            viewport={{ once: true }}
+          >
+            <h3>Track Info Overlay</h3>
+            <p>
+              Press <code>i</code> to view detailed metadata like artist, album,
+              genre, and more.
+            </p>
+          </motion.div>
         </div>
       </section>
       <footer className={styles.footer}>
