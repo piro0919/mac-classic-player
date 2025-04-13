@@ -117,13 +117,9 @@
 .placeholder {
   align-items: center;
   display: flex;
+  inset: 0;
   justify-content: center;
-  left: 50%;
-  pointer-events: none;
   position: absolute;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  z-index: 1;
 }
 
 .placeholderImage {
@@ -133,6 +129,7 @@
 
 .fileMusicIcon {
   opacity: 0.5;
+  position: absolute;
 }
 
 .overlay {
@@ -179,4 +176,20 @@
   display: inline-block;
   font-family: monospace;
   padding: 0rem 0.5rem;
+}
+
+.albumArt {
+  animation: fadeIn 0.5s ease forwards;
+  border-radius: 12px;
+  box-shadow: 0 4px 10px rgb(0 0 0 / 0.3);
+  max-height: 80%;
+  max-width: 80%;
+  object-fit: contain;
+  opacity: 0;
+}
+
+@keyframes fadeIn {
+  to {
+    opacity: 1;
+  }
 }

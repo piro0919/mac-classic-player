@@ -1,6 +1,6 @@
+/* eslint-disable @typescript-eslint/no-misused-promises */
 /* eslint-disable security/detect-object-injection */
 import { initialState, videoQueueReducer } from "@/store/videoQueueReducer";
-import { extractVideoItemsFromDrop } from "@/utils/fileUtils";
 import { useFullscreen } from "@mantine/hooks";
 import {
   FileMusic,
@@ -14,6 +14,7 @@ import {
   Volume2,
   VolumeX,
 } from "lucide-react";
+import { parseBlob } from "music-metadata-browser"; // New import
 import React, {
   Fragment,
   useCallback,
@@ -45,6 +46,55 @@ const VideoPlayer: React.FC = () => {
     muted,
     queue: videoQueue,
   } = videoState;
+
+  useEffect(() => {
+    videoQueue.forEach(async (item, index) => {
+      if (
+        !item.artworkUrl &&
+        ["mp3", "m4a", "aac", "flac", "wav"].includes(item.ext)
+      ) {
+        try {
+          const res = await fetch(item.url);
+          const blob = await res.blob();
+          const metadata = await parseBlob(blob);
+          const artist = metadata.common.artist ?? "";
+          const album = metadata.common.album ?? "";
+
+          if (artist || album) {
+            const lang = navigator.language.toLowerCase();
+            const countries = lang.startsWith("ja") ? ["JP", "US"] : ["US"];
+
+            for (const country of countries) {
+              for (const term of [`${artist} ${album}`, artist, album]) {
+                for (const entity of ["song", "album"]) {
+                  const res = await fetch(
+                    `https://itunes.apple.com/search?term=${encodeURIComponent(term)}&media=music&entity=${entity}&country=${country}&limit=1`,
+                  );
+                  const data = await res.json();
+
+                  console.log(data);
+
+                  if (data?.results?.[0]?.artworkUrl100) {
+                    const artworkUrl = data.results[0].artworkUrl100.replace(
+                      "100x100",
+                      "600x600",
+                    );
+
+                    dispatch({ artworkUrl, index, type: "UPDATE_ARTWORK" });
+
+                    return;
+                  }
+                }
+              }
+            }
+          }
+        } catch (e) {
+          console.error("artwork fetch error:", e);
+        }
+      }
+    });
+  }, [videoQueue]);
+
   const {
     fullscreen: isFullscreen,
     ref: fullscreenRef,
@@ -61,7 +111,7 @@ const VideoPlayer: React.FC = () => {
     return `${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
   }, []);
   const handleFileChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>): void => {
+    async (e: React.ChangeEvent<HTMLInputElement>): Promise<void> => {
       const files = Array.from(e.target.files || []);
       const urls = files
         .filter(
@@ -69,7 +119,7 @@ const VideoPlayer: React.FC = () => {
             file.type.startsWith("video/") || file.type.startsWith("audio/"),
         )
         .map((file) => {
-          const [baseName, ext] = file.name.split(/\.(?=[^.]+$)/); // 最後のドットで分割
+          const [baseName, ext] = file.name.split(/\.(?=[^.]+$)/);
           const url = URL.createObjectURL(file);
 
           return { ext, name: baseName, url };
@@ -100,8 +150,21 @@ const VideoPlayer: React.FC = () => {
     dispatch({ time, type: "SET_CURRENT_TIME" });
   }, []);
   const handleDrop = useCallback(
-    (e: React.DragEvent<HTMLDivElement>): void => {
-      const items = extractVideoItemsFromDrop(e);
+    async (e: React.DragEvent<HTMLDivElement>): Promise<void> => {
+      e.preventDefault();
+
+      const files = Array.from(e.dataTransfer.files);
+      const items = files
+        .filter(
+          (file) =>
+            file.type.startsWith("video/") || file.type.startsWith("audio/"),
+        )
+        .map((file) => {
+          const [baseName, ext] = file.name.split(/\.(?=[^.]+$)/);
+          const url = URL.createObjectURL(file);
+
+          return { ext, name: baseName, url };
+        });
 
       if (items.length > 0) {
         dispatch({ files: items, type: "LOAD_FILES" });
@@ -126,10 +189,10 @@ const VideoPlayer: React.FC = () => {
   useEffect(() => {
     const { ipcRenderer } = window.require("electron");
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const handleOpenFile = (_: any, filePaths: string[]) => {
+    const handleOpenFile = async (_: any, filePaths: string[]) => {
       const fs = window.require("fs");
-      const items = filePaths
-        .map((filePath) => {
+      const items = await Promise.all(
+        filePaths.map(async (filePath) => {
           const fileName = filePath.split("/").pop() || "Video Player";
           const [baseName, ext] = fileName.split(/\.(?=[^.]+$)/);
           const buffer = fs.readFileSync(filePath);
@@ -141,8 +204,8 @@ const VideoPlayer: React.FC = () => {
           const url = URL.createObjectURL(blob);
 
           return { ext, name: baseName, url };
-        })
-        .filter(Boolean);
+        }),
+      );
 
       if (items.length > 0) {
         document.title = items[0].name || "Video Player";
@@ -306,7 +369,7 @@ const VideoPlayer: React.FC = () => {
       <input
         accept="video/*,audio/*"
         multiple={true}
-        onChange={handleFileChange}
+        onChange={async (e) => handleFileChange(e)} // Updated onChange binding
         ref={fileInputRef}
         style={{ display: "none" }}
         type="file"
@@ -326,6 +389,13 @@ const VideoPlayer: React.FC = () => {
             ) && (
               <div className={styles.placeholder}>
                 <FileMusic className={styles.fileMusicIcon} size={120} />
+                {videoQueue[currentIndex].artworkUrl && (
+                  <img
+                    alt={videoQueue[currentIndex].name}
+                    className={styles.albumArt}
+                    src={videoQueue[currentIndex].artworkUrl}
+                  />
+                )}
               </div>
             )}
           <ReactPlayer
@@ -455,7 +525,6 @@ const VideoPlayer: React.FC = () => {
           {muted ? <VolumeX size={18} /> : <Volume2 size={18} />}
         </button>
         <button
-          // eslint-disable-next-line @typescript-eslint/no-misused-promises
           onClick={async () => {
             await toggleFullscreen();
           }}

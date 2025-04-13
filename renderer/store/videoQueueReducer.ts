@@ -1,4 +1,5 @@
 export type VideoItem = {
+  artworkUrl?: string;
   ext: string; // 例: "mp4", "mp3"
   name: string; // 拡張子を含まない
   url: string;
@@ -14,6 +15,7 @@ type VideoQueueState = {
 };
 
 export type VideoQueueAction =
+  | { artworkUrl: string; index: number; type: "UPDATE_ARTWORK" }
   | { files: VideoItem[]; type: "LOAD_FILES" }
   | { index: number; type: "SET_INDEX" }
   | { time: number; type: "SET_CURRENT_TIME" }
@@ -101,6 +103,19 @@ export function videoQueueReducer(
         ...state,
         muted: !state.muted,
       };
+    case "UPDATE_ARTWORK": {
+      const updatedQueue = [...state.queue];
+
+      updatedQueue[action.index] = {
+        ...updatedQueue[action.index],
+        artworkUrl: action.artworkUrl,
+      };
+
+      return {
+        ...state,
+        queue: updatedQueue,
+      };
+    }
     case "TOGGLE_PLAY":
       return {
         ...state,
