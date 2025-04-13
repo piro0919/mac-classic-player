@@ -4,6 +4,7 @@ import { initialState, videoQueueReducer } from "@/store/videoQueueReducer";
 import { useFullscreen } from "@mantine/hooks";
 import {
   FileMusic,
+  Info,
   Maximize2,
   Minimize2,
   Pause,
@@ -38,6 +39,9 @@ const VideoPlayer: React.FC = () => {
     defaultValue: 1,
   });
   const [showHelp, setShowHelp] = useState(false);
+  const [showInfo, setShowInfo] = useState(false);
+  const [infoVisible, setInfoVisible] = useState(false);
+  const [helpVisible, setHelpVisible] = useState(false);
   const {
     currentIndex,
     currentTime,
@@ -80,7 +84,12 @@ const VideoPlayer: React.FC = () => {
                       "600x600",
                     );
 
-                    dispatch({ artworkUrl, index, type: "UPDATE_ARTWORK" });
+                    dispatch({
+                      artworkUrl,
+                      index,
+                      metadata,
+                      type: "UPDATE_MEDIA_INFO",
+                    });
 
                     return;
                   }
@@ -364,6 +373,26 @@ const VideoPlayer: React.FC = () => {
     ["Esc", "Close this help"],
   ];
 
+  useEffect(() => {
+    if (showInfo) {
+      setInfoVisible(true);
+    } else {
+      const timeout = setTimeout(() => setInfoVisible(false), 300);
+
+      return () => clearTimeout(timeout);
+    }
+  }, [showInfo]);
+
+  useEffect(() => {
+    if (showHelp) {
+      setHelpVisible(true);
+    } else {
+      const timeout = setTimeout(() => setHelpVisible(false), 300);
+
+      return () => clearTimeout(timeout);
+    }
+  }, [showHelp]);
+
   return (
     <div className={styles.container} ref={fullscreenRef}>
       <input
@@ -525,6 +554,14 @@ const VideoPlayer: React.FC = () => {
           {muted ? <VolumeX size={18} /> : <Volume2 size={18} />}
         </button>
         <button
+          className={styles.controlButton}
+          disabled={!videoQueue[currentIndex]?.metadata}
+          onClick={() => setShowInfo((v) => !v)}
+          title="Track Info"
+        >
+          <Info size={18} />
+        </button>
+        <button
           onClick={async () => {
             await toggleFullscreen();
           }}
@@ -533,8 +570,11 @@ const VideoPlayer: React.FC = () => {
           {isFullscreen ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
         </button>
       </div>
-      {showHelp && (
-        <div className={styles.overlay} onClick={() => setShowHelp(false)}>
+      {helpVisible && (
+        <div
+          className={`${styles.overlay} ${!showHelp ? styles.hide : ""}`}
+          onClick={() => setShowHelp(false)}
+        >
           <div className={styles.helpBox}>
             <h2>Keyboard Shortcuts</h2>
             <dl className={styles.list}>
@@ -546,6 +586,54 @@ const VideoPlayer: React.FC = () => {
                   <dd>{desc}</dd>
                 </Fragment>
               ))}
+            </dl>
+          </div>
+        </div>
+      )}
+      {infoVisible && videoQueue[currentIndex]?.metadata && (
+        <div
+          className={`${styles.overlay} ${!showInfo ? styles.hide : ""}`}
+          onClick={() => setShowInfo(false)}
+        >
+          <div className={styles.helpBox}>
+            <h2>Track Info</h2>
+            <dl className={styles.list}>
+              {[
+                ["title", "Title"],
+                ["artist", "Artist"],
+                ["album", "Album"],
+                ["genre", "Genre"],
+                ["year", "Year"],
+                ["composer", "Composer"],
+                ["bpm", "BPM"],
+              ].map(([key, label]) => {
+                // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+                // @ts-ignore
+                const value = videoQueue[currentIndex].metadata?.common?.[key];
+
+                if (!value) return null;
+
+                return (
+                  <Fragment key={key}>
+                    <dt>{label}</dt>
+                    <dd>
+                      {Array.isArray(value) ? value.join(", ") : String(value)}
+                    </dd>
+                  </Fragment>
+                );
+              })}
+              {/* Special rendering for track number */}
+              {videoQueue[currentIndex].metadata?.common?.track?.no && (
+                <Fragment key="track">
+                  <dt>Track</dt>
+                  <dd>
+                    {videoQueue[currentIndex].metadata.common.track.no}
+                    {videoQueue[currentIndex].metadata.common.track.of
+                      ? ` / ${videoQueue[currentIndex].metadata.common.track.of}`
+                      : ""}
+                  </dd>
+                </Fragment>
+              )}
             </dl>
           </div>
         </div>

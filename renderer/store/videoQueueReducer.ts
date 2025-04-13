@@ -1,6 +1,9 @@
+import type { IAudioMetadata } from "music-metadata-browser";
+
 export type VideoItem = {
   artworkUrl?: string;
   ext: string; // 例: "mp4", "mp3"
+  metadata?: IAudioMetadata;
   name: string; // 拡張子を含まない
   url: string;
 };
@@ -15,7 +18,12 @@ type VideoQueueState = {
 };
 
 export type VideoQueueAction =
-  | { artworkUrl: string; index: number; type: "UPDATE_ARTWORK" }
+  | {
+      artworkUrl?: string;
+      index: number;
+      metadata?: IAudioMetadata;
+      type: "UPDATE_MEDIA_INFO";
+    }
   | { files: VideoItem[]; type: "LOAD_FILES" }
   | { index: number; type: "SET_INDEX" }
   | { time: number; type: "SET_CURRENT_TIME" }
@@ -103,12 +111,13 @@ export function videoQueueReducer(
         ...state,
         muted: !state.muted,
       };
-    case "UPDATE_ARTWORK": {
+    case "UPDATE_MEDIA_INFO": {
       const updatedQueue = [...state.queue];
 
       updatedQueue[action.index] = {
         ...updatedQueue[action.index],
-        artworkUrl: action.artworkUrl,
+        artworkUrl: action.artworkUrl ?? updatedQueue[action.index].artworkUrl,
+        metadata: action.metadata ?? updatedQueue[action.index].metadata,
       };
 
       return {
