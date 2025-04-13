@@ -12,7 +12,7 @@ export const useElectronEvents = (
   useEffect(() => {
     // Electronが利用可能かチェック
     if (!window.require) {
-      console.warn("Electron is not available");
+      console.log("Electron is not available");
 
       return;
     }
@@ -26,6 +26,8 @@ export const useElectronEvents = (
 
         return;
       }
+
+      console.log("Received open-file event with paths:", filePaths); // デバッグログを追加
 
       if (!filePaths || filePaths.length === 0) return;
 
@@ -51,30 +53,40 @@ export const useElectronEvents = (
           }),
         );
 
+        console.log("Processed files:", items); // デバッグログを追加
+
         if (items.length > 0) {
-          document.title = items[0].name || "Video Player";
+          // ここで確実に動画が再生されるようにディスパッチの順序を修正
           dispatch({ type: "STOP" });
           dispatch({ files: items, type: "LOAD_FILES" });
+
+          // タイムアウトを長めに設定して、UIレンダリングが完了してから再生を開始
           setTimeout(() => {
             dispatch({ type: "SET_IS_PLAYING", value: true });
-          }, 0);
+            console.log("Setting isPlaying to true"); // デバッグログを追加
+          }, 100);
+
+          // 時間関連のディスパッチを最後に行う
           dispatch({ time: 0, type: "SET_CURRENT_TIME" });
-          dispatch({ time: 0, type: "SET_DURATION" });
+          seekToTime(0);
         }
       } catch (error) {
         console.error("Error loading files:", error);
       }
     };
 
+    // イベントリスナーを登録
+    console.log("Registering open-file event listener"); // デバッグログを追加
     ipcRenderer.on("open-file", handleOpenFile);
     ipcRenderer.on("suppress-next-open-file", () => {
       ignoreNextOpenFileRef.current = true;
     });
 
+    // コンポーネントのアンマウント時にリスナーを解除
     return () => {
       ipcRenderer.removeListener("open-file", handleOpenFile);
     };
-  }, [dispatch]);
+  }, [dispatch, seekToTime]); // seekToTimeを依存配列に追加
 
   // ヘルプトグルイベントのハンドリング
   useEffect(() => {
