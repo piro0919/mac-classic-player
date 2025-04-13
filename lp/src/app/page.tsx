@@ -20,6 +20,7 @@ export default function Home() {
           width={800}
           height={450}
           priority
+          quality={100}
         />
         <div className={styles.titleRow}>
           <Image
@@ -28,6 +29,7 @@ export default function Home() {
             width={48}
             height={48}
             className={styles.icon}
+            quality={100}
           />
           <h1 className={styles.title}>Mac Classic Player</h1>
         </div>
@@ -88,6 +90,7 @@ export default function Home() {
             alt="Playing a video"
             width={600}
             height={338}
+            quality={100}
           />
           <motion.div
             className={styles.screenshotText}
@@ -117,6 +120,7 @@ export default function Home() {
             alt="Audio mode"
             width={600}
             height={338}
+            quality={100}
           />
         </div>
         <div className={styles.screenshotRow}>
@@ -126,6 +130,7 @@ export default function Home() {
             alt="Shortcut overlay"
             width={600}
             height={338}
+            quality={100}
           />
           <motion.div
             className={styles.screenshotText}
@@ -157,6 +162,7 @@ export default function Home() {
             alt="Empty window on startup"
             width={600}
             height={338}
+            quality={100}
           />
         </div>
         <div className={styles.screenshotRow}>
@@ -166,6 +172,7 @@ export default function Home() {
             alt="Track info overlay"
             width={600}
             height={338}
+            quality={100}
           />
           <motion.div
             className={styles.screenshotText}
