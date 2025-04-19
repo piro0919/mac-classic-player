@@ -80,7 +80,7 @@
     "secretlint": "9.3.1",
     "stylelint": "16.18.0",
     "stylelint-config-css-modules": "4.4.0",
-    "stylelint-config-recommended": "15.0.0",
+    "stylelint-config-recommended": "16.0.0",
     "stylelint-css-modules-no-global-scoped-selector": "1.0.2",
     "stylelint-declaration-block-no-ignored-properties": "2.8.0",
     "stylelint-high-performance-animation": "1.11.0",
