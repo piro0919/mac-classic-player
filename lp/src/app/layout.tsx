@@ -11,7 +11,7 @@ export const metadata: Metadata = {
   openGraph: {
     title,
     description,
-    url: "https://mcp.kk-web.link",
+    url: "https://mcp.kkweb.io",
     siteName: title,
     type: "website",
   },

@@ -193,11 +193,7 @@ export default function Home() {
         <span>Free & Open Source — Made for macOS</span>
         <span>
           &copy; 2025{" "}
-          <a
-            href="https://kk-web.link/"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
+          <a href="https://kkweb.io/" target="_blank" rel="noopener noreferrer">
             kk-web
           </a>
         </span>
