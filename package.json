@@ -97,10 +97,10 @@
   "name": "mac-classic-player",
   "overrides": {
     "stylelint-css-modules-no-global-scoped-selector": {
-      "stylelint": "16.23.0"
+      "stylelint": "16.23.1"
     },
     "stylelint-no-unused-selectors": {
-      "stylelint": "16.23.0"
+      "stylelint": "16.23.1"
     }
   },
   "productName": "Mac Classic Player",
