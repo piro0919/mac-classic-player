@@ -55,7 +55,7 @@
     "@typescript-eslint/eslint-plugin": "8.39.0",
     "@typescript-eslint/parser": "8.39.0",
     "@uphold/commitlint-config": "1.1.1",
-    "@vitejs/plugin-react": "4.7.0",
+    "@vitejs/plugin-react": "5.0.0",
     "concurrently": "9.2.0",
     "dotenv-cli": "10.0.0",
     "electron": "37.2.6",
