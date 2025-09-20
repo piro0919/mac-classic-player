@@ -37,7 +37,7 @@
     "react": "19.1.1",
     "react-dom": "19.1.1",
     "react-dropzone": "14.3.8",
-    "react-player": "3.3.2",
+    "react-player": "3.3.3",
     "ress": "5.0.2",
     "use-local-storage-state": "19.5.0"
   },
