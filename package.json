@@ -58,7 +58,7 @@
     "@vitejs/plugin-react": "5.1.0",
     "concurrently": "9.2.1",
     "dotenv-cli": "11.0.0",
-    "electron": "38.5.0",
+    "electron": "39.0.0",
     "electron-builder": "26.0.12",
     "eslint": "^9",
     "eslint-config-prettier": "10.1.8",
