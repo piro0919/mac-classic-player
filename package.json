@@ -29,7 +29,7 @@
     "productName": "Mac Classic Player"
   },
   "dependencies": {
-    "@mantine/hooks": "8.3.6",
+    "@mantine/hooks": "8.3.7",
     "electron-updater": "6.6.2",
     "lucide-react": "0.553.0",
     "ms": "2.1.3",
