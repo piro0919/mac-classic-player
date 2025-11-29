@@ -76,7 +76,7 @@
     "eslint-plugin-unused-imports": "4.3.0",
     "eslint-plugin-write-good-comments": "0.2.0",
     "lefthook": "2.0.4",
-    "prettier": "3.7.2",
+    "prettier": "3.7.3",
     "secretlint": "11.2.5",
     "stylelint": "16.26.1",
     "stylelint-config-css-modules": "4.5.1",
