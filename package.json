@@ -59,7 +59,7 @@
     "concurrently": "9.2.1",
     "dotenv-cli": "11.0.0",
     "electron": "40.1.0",
-    "electron-builder": "26.4.0",
+    "electron-builder": "26.7.0",
     "eslint": "^9",
     "eslint-config-prettier": "10.1.8",
     "eslint-plugin-css": "0.11.1",
