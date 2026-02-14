@@ -82,7 +82,7 @@
     "stylelint-config-css-modules": "4.6.0",
     "stylelint-config-recommended": "17.0.0",
     "stylelint-css-modules-no-global-scoped-selector": "1.0.2",
-    "stylelint-declaration-block-no-ignored-properties": "2.8.0",
+    "stylelint-declaration-block-no-ignored-properties": "3.0.0",
     "stylelint-high-performance-animation": "1.11.0",
     "stylelint-no-unused-selectors": "1.0.40",
     "stylelint-order": "7.0.1",
