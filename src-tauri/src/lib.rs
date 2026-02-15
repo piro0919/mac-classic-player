@@ -404,20 +404,34 @@ pub fn run() {
                 }
 
                 // ダウンロードとインストールを実行
-                if update.download_and_install(|_, _| {}, || {}).await.is_ok() {
-                    // インストール完了を通知し、アプリを終了する
-                    // （macOSではAppHandle::restart()が正常に動作しないため手動再起動）
-                    let done_msg = if is_ja {
-                        "アップデートが完了しました。\nアプリを再起動してください。"
-                    } else {
-                        "Update complete.\nPlease restart the app."
-                    };
-                    update_handle
-                        .dialog()
-                        .message(done_msg)
-                        .title(title)
-                        .blocking_show();
-                    update_handle.exit(0);
+                match update.download_and_install(|_, _| {}, || {}).await {
+                    Ok(_) => {
+                        // インストール完了を通知し、アプリを終了する
+                        // （macOSではAppHandle::restart()が正常に動作しないため手動再起動）
+                        let done_msg = if is_ja {
+                            "アップデートが完了しました。\nアプリを再起動してください。"
+                        } else {
+                            "Update complete.\nPlease restart the app."
+                        };
+                        update_handle
+                            .dialog()
+                            .message(done_msg)
+                            .title(title)
+                            .blocking_show();
+                        update_handle.exit(0);
+                    }
+                    Err(e) => {
+                        let err_msg = if is_ja {
+                            format!("アップデートに失敗しました。\n{}", e)
+                        } else {
+                            format!("Update failed.\n{}", e)
+                        };
+                        update_handle
+                            .dialog()
+                            .message(err_msg)
+                            .title(title)
+                            .blocking_show();
+                    }
                 }
             });
 
