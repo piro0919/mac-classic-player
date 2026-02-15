@@ -261,8 +261,19 @@ pub fn run() {
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_process::init())
-        // ウィンドウの位置・サイズを自動的に保存・復元するプラグイン
-        .plugin(tauri_plugin_window_state::Builder::default().build())
+        // ウィンドウの位置を自動的に保存・復元するプラグイン
+        // SIZE はRetinaで2倍になるバグがあるためJSで手動管理する
+        .plugin(
+            tauri_plugin_window_state::Builder::default()
+                .with_state_flags(
+                    tauri_plugin_window_state::StateFlags::POSITION
+                        | tauri_plugin_window_state::StateFlags::MAXIMIZED
+                        | tauri_plugin_window_state::StateFlags::VISIBLE
+                        | tauri_plugin_window_state::StateFlags::DECORATIONS
+                        | tauri_plugin_window_state::StateFlags::FULLSCREEN,
+                )
+                .build(),
+        )
         // アップデーターのプラグイン
         .plugin(tauri_plugin_updater::Builder::new().build())
         // --- アプリ状態の管理 ---
