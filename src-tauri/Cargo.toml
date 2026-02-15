@@ -1,6 +1,6 @@
 [package]
 name = "mac-classic-player"
-version = "0.1.1"
+version = "0.1.2"
 description = "Mac Classic Player"
 authors = ["piro"]
 edition = "2021"
