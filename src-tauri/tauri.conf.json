@@ -76,7 +76,7 @@
   },
   "plugins": {
     "updater": {
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDEyNkU3NEVENzQ1NTgwQTgKUldTb2dGVjA3WFJ1RXA2bTE5OVBNWjBmSWVsN01KRGpmUUxBS3lrT2ZKTDlZOWhIUk15NHVOM3UK",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEM0OUUyMTE2RjMxMzBBQzMKUldURENoUHpGaUdleElHM3UwWnlBdjFYSWxsWVdTUVZVcTYzUUJtV2p5SVhzUmpvNTF3M3Q0dTQK",
       "endpoints": [
         "https://github.com/piro0919/mac-classic-player/releases/latest/download/latest.json"
       ]
