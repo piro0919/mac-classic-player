@@ -1,7 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
-import { readFile } from "@tauri-apps/plugin-fs";
+import { readFile, stat } from "@tauri-apps/plugin-fs";
 import { parseBuffer } from "music-metadata-browser";
 import { useEffect, useRef } from "react";
 import type { VideoQueueAction } from "../store/videoQueueReducer";
@@ -29,37 +29,65 @@ const parseFilePath = (filePath: string): { baseName: string; ext: string } => {
     : { baseName: fileName, ext: "" };
 };
 
-// ファイルパスからBlob URLを作成する
-// macOS WKWebViewではasset://プロトコルが<video>要素で動作しないため、
-// readFileでバイナリを読み込み、Blob URLに変換する
-// 音声ファイルの場合はメタデータも同時に解析する
-const filePathToBlobUrl = async (filePath: string): Promise<VideoItem> => {
+// Blob URLでメモリに読み込む上限（500MB）
+// これを超えるファイルはローカルHTTPサーバー経由でストリーミング再生する
+const MAX_BLOB_SIZE = 500 * 1024 * 1024;
+
+// ストリーミングサーバーのポート番号をキャッシュする
+let streamPortCache: number | null = null;
+
+const getStreamPort = async (): Promise<number> => {
+  if (streamPortCache === null) {
+    streamPortCache = await invoke<number>("get_stream_port");
+  }
+
+  return streamPortCache;
+};
+
+// ファイルパスからVideoItemを作成する
+// 通常はreadFile + Blob URLで再生する
+// 大容量ファイルはローカルHTTPサーバー経由でRange request対応のストリーミング再生する
+const filePathToVideoItem = async (filePath: string): Promise<VideoItem> => {
   const { baseName, ext } = parseFilePath(filePath);
-  const contents = await readFile(filePath);
   const mime = MIME_MAP[ext] || "application/octet-stream";
-  const blob = new Blob([contents], { type: mime });
-  const url = URL.createObjectURL(blob);
 
-  // 音声ファイルの場合、Uint8Arrayから直接メタデータを解析する
-  // （WKWebViewではBlob.stream()が正常に動作しないため、parseBufferを使う）
-  const item: VideoItem = { ext, name: baseName, url: `${url}#.${ext}` };
+  // ファイルサイズをチェックして読み込み方法を決定する
+  const fileInfo = await stat(filePath);
+  const isLargeFile = fileInfo.size > MAX_BLOB_SIZE;
 
-  if (AUDIO_EXTENSIONS.includes(ext)) {
-    try {
-      item.metadata = await parseBuffer(contents, { mimeType: mime });
-    } catch {
-      // メタデータ解析に失敗しても再生には影響しない
+  let url: string;
+  let metadata: VideoItem["metadata"];
+
+  if (isLargeFile) {
+    // 大容量ファイル: ローカルHTTPサーバー経由でストリーミング
+    const port = await getStreamPort();
+
+    url = `http://127.0.0.1:${port}${encodeURI(filePath)}`;
+  } else {
+    // 通常ファイル: readFile + Blob URLで再生
+    const contents = await readFile(filePath);
+    const blob = new Blob([contents], { type: mime });
+
+    url = `${URL.createObjectURL(blob)}#.${ext}`;
+
+    // 音声ファイルの場合、メタデータも解析する
+    if (AUDIO_EXTENSIONS.includes(ext)) {
+      try {
+        metadata = await parseBuffer(contents, { mimeType: mime });
+      } catch {
+        // メタデータ解析に失敗しても再生には影響しない
+      }
     }
   }
 
-  return item;
+  return { ext, metadata, name: baseName, url };
 };
 
 // 複数のファイルパスからVideoItemの配列を作成する
 const filePathsToVideoItems = async (
   filePaths: string[],
 ): Promise<VideoItem[]> => {
-  const items = await Promise.all(filePaths.map(filePathToBlobUrl));
+  const items = await Promise.all(filePaths.map(filePathToVideoItem));
 
   return items;
 };

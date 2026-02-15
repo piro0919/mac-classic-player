@@ -39,6 +39,7 @@ const VideoPlayer: React.FC = () => {
   const [infoVisible, setInfoVisible] = useState(false);
   const [helpVisible, setHelpVisible] = useState(false);
   const [shouldShowPlayer, setShouldShowPlayer] = useState(true);
+  const [isBuffering, setIsBuffering] = useState(false);
   // ステートの解凍
   const {
     currentIndex,
@@ -180,6 +181,8 @@ const VideoPlayer: React.FC = () => {
           {videoQueue[currentIndex] && (
             <AudioPlayer currentItem={videoQueue[currentIndex]} />
           )}
+          {/* ローディングスピナー */}
+          {isBuffering && <div className={styles.loadingOverlay}><div className={styles.spinner} /></div>}
           {/* メディアプレーヤー */}
           {shouldShowPlayer && (
             <ReactPlayer
@@ -204,8 +207,10 @@ const VideoPlayer: React.FC = () => {
                   dispatch({ type: "SET_IS_PLAYING", value: true });
                 }
               }}
+              onCanPlayThrough={() => setIsBuffering(false)}
               onPause={() => dispatch({ type: "SET_IS_PLAYING", value: false })}
               onPlay={() => dispatch({ type: "SET_IS_PLAYING", value: true })}
+              onWaiting={() => setIsBuffering(true)}
               onTimeUpdate={(e: React.SyntheticEvent<HTMLVideoElement>) => {
                 const playedSeconds = e.currentTarget.currentTime;
 

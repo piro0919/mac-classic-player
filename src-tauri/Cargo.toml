@@ -1,6 +1,6 @@
 [package]
 name = "mac-classic-player"
-version = "0.1.0"
+version = "0.1.1"
 description = "Mac Classic Player"
 authors = ["piro"]
 edition = "2021"
@@ -24,3 +24,4 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 sys-locale = "0.3"
 tauri-plugin-opener = "2.5.3"
+urlencoding = "2"

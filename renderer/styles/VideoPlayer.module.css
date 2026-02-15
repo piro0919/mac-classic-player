@@ -216,6 +216,31 @@
   }
 }
 
+.loadingOverlay {
+  align-items: center;
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  pointer-events: none;
+  position: absolute;
+  z-index: 10;
+}
+
+.spinner {
+  animation: spin 0.8s linear infinite;
+  border: 3px solid rgb(255 255 255 / 0.2);
+  border-radius: 50%;
+  border-top-color: #fff;
+  height: 40px;
+  width: 40px;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .controlButton:disabled {
   background: #2a2e36;
   cursor: not-allowed;

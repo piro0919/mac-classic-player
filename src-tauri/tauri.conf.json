@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "Mac Classic Player",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "identifier": "com.example.macclassicplayer",
   "build": {
     "beforeDevCommand": "npm run dev:frontend",
@@ -20,7 +20,7 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self'; img-src 'self' asset: http://asset.localhost https://asset.localhost https://*.mzstatic.com data:; media-src 'self' asset: http://asset.localhost https://asset.localhost blob:; connect-src 'self' blob: https://itunes.apple.com; style-src 'self' 'unsafe-inline'; script-src 'self'",
+      "csp": "default-src 'self'; img-src 'self' asset: http://asset.localhost https://asset.localhost https://*.mzstatic.com data:; media-src 'self' asset: http://asset.localhost https://asset.localhost blob: http://127.0.0.1:*; connect-src 'self' blob: https://itunes.apple.com; style-src 'self' 'unsafe-inline'; script-src 'self'",
       "assetProtocol": {
         "scope": {
           "allow": ["$HOME/**", "/Volumes/**"]
