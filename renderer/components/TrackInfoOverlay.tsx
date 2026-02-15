@@ -39,7 +39,7 @@ const TrackInfoOverlay: React.FC<TrackInfoOverlayProps> = ({
         <h2>Track Info</h2>
         <dl className={styles.list}>
           {metadataFields.map(([key, label]) => {
-            const value = currentTrack.metadata?.common?.[key];
+            const value = currentTrack.metadata?.common?.[key as keyof typeof currentTrack.metadata.common];
 
             if (!value) return null;
 

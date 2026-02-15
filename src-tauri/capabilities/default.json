@@ -1,0 +1,20 @@
+{
+  "identifier": "default",
+  "description": "Mac Classic Player default capabilities",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    "dialog:default",
+    "dialog:allow-open",
+    "fs:default",
+    {
+      "identifier": "fs:allow-read-file",
+      "allow": [{ "path": "$HOME/**" }, { "path": "/Volumes/**" }]
+    },
+    "core:window:allow-set-fullscreen",
+    "shell:allow-open",
+    "updater:default",
+    "process:default",
+    "window-state:default"
+  ]
+}

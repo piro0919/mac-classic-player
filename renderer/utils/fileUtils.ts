@@ -1,4 +1,4 @@
-import { type VideoItem } from "@/store/videoQueueReducer";
+import type { VideoItem } from "@/types/videoTypes";
 
 export function extractVideoItemsFromDrop(e: React.DragEvent): VideoItem[] {
   e.preventDefault();

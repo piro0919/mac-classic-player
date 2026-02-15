@@ -19,6 +19,6 @@ pre-commit:
     # typescript:
     #   run: npx tsc --noEmit
 commit-msg:
-  scripts:
-    "commitlint.sh":
-      runner: bash
+  commands:
+    commitlint:
+      run: npx commitlint --edit {1}

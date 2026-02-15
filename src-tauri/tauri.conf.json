@@ -1,0 +1,85 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Mac Classic Player",
+  "version": "0.0.17",
+  "identifier": "com.example.macclassicplayer",
+  "build": {
+    "beforeDevCommand": "npm run dev:frontend",
+    "beforeBuildCommand": "npm run build:frontend",
+    "devUrl": "http://localhost:5173",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "Mac Classic Player",
+        "width": 800,
+        "height": 450,
+        "resizable": true,
+        "visible": false
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; img-src 'self' asset: http://asset.localhost https://asset.localhost https://*.mzstatic.com data:; media-src 'self' asset: http://asset.localhost https://asset.localhost blob:; connect-src 'self' blob: https://itunes.apple.com; style-src 'self' 'unsafe-inline'; script-src 'self'",
+      "assetProtocol": {
+        "scope": {
+          "allow": ["$HOME/**", "/Volumes/**"]
+        }
+      }
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["app", "dmg"],
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns"
+    ],
+    "fileAssociations": [
+      {
+        "ext": ["mp4"],
+        "mimeType": "video/mp4",
+        "description": "MP4 Video",
+        "role": "Viewer"
+      },
+      {
+        "ext": ["mov"],
+        "mimeType": "video/quicktime",
+        "description": "QuickTime Movie",
+        "role": "Viewer"
+      },
+      {
+        "ext": ["mp3"],
+        "mimeType": "audio/mpeg",
+        "description": "MP3 Audio",
+        "role": "Viewer"
+      },
+      {
+        "ext": ["m4a"],
+        "mimeType": "audio/mp4",
+        "description": "M4A Audio",
+        "role": "Viewer"
+      },
+      {
+        "ext": ["wav"],
+        "mimeType": "audio/wav",
+        "description": "WAV Audio",
+        "role": "Viewer"
+      }
+    ],
+    "macOS": {
+      "minimumSystemVersion": "11.0"
+    },
+    "createUpdaterArtifacts": true
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDEyNkU3NEVENzQ1NTgwQTgKUldTb2dGVjA3WFJ1RXA2bTE5OVBNWjBmSWVsN01KRGpmUUxBS3lrT2ZKTDlZOWhIUk15NHVOM3UK",
+      "endpoints": [
+        "https://github.com/piro0919/mac-classic-player/releases/latest/download/latest.json"
+      ]
+    }
+  }
+}

@@ -1,5 +1,5 @@
 import { initialState, videoQueueReducer } from "@/store/videoQueueReducer";
-import { useFullscreen } from "@mantine/hooks";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 // VideoPlayer.tsx (メインコンポーネント)
 import React, {
   useCallback,
@@ -12,7 +12,7 @@ import React, {
 import ReactPlayer from "react-player";
 import useLocalStorageState from "use-local-storage-state";
 import placeholderImage from "../assets/video-placeholder.png";
-import { useElectronEvents } from "../hooks/useElectronEvents";
+import { useTauriEvents } from "../hooks/useTauriEvents";
 import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
 // カスタムフックのインポート
 import { useMediaArtwork } from "../hooks/useMediaArtwork";
@@ -28,7 +28,7 @@ const VideoPlayer: React.FC = () => {
   // Refs
   const fileInputRef = useRef<HTMLInputElement>(null);
   const currentTimeRef = useRef(0);
-  const playerRef = useRef<null | ReactPlayer>(null);
+  const playerRef = useRef<HTMLVideoElement | null>(null);
   // State管理
   const [videoState, dispatch] = useReducer(videoQueueReducer, initialState);
   const [volume, setVolume] = useLocalStorageState("volume", {
@@ -48,12 +48,16 @@ const VideoPlayer: React.FC = () => {
     muted,
     queue: videoQueue,
   } = videoState;
-  // フルスクリーンフック
-  const {
-    fullscreen: isFullscreen,
-    ref: fullscreenRef,
-    toggle: toggleFullscreen,
-  } = useFullscreen();
+  // フルスクリーン状態管理（Tauri Window API使用）
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const fullscreenRef = useRef<HTMLDivElement>(null);
+  const toggleFullscreen = useCallback(async () => {
+    const win = getCurrentWindow();
+    const current = await win.isFullscreen();
+
+    await win.setFullscreen(!current);
+    setIsFullscreen(!current);
+  }, []);
   // 現在のビデオURLのメモ化
   const videoUrl = useMemo(
     () => videoQueue[currentIndex]?.url ?? null,
@@ -68,10 +72,10 @@ const VideoPlayer: React.FC = () => {
       .toString()
       .padStart(2, "0")}`;
   }, []);
-  // シーク関数
+  // シーク関数（react-player v3: HTMLVideoElementのcurrentTimeを直接操作）
   const seekToTime = useCallback((time: number) => {
     if (playerRef.current) {
-      playerRef.current.seekTo(time, "seconds");
+      playerRef.current.currentTime = time;
     }
 
     currentTimeRef.current = time;
@@ -94,12 +98,16 @@ const VideoPlayer: React.FC = () => {
     showHelp,
     toggleFullscreen,
   });
+  const { suppressNextOpenFile } = useTauriEvents(
+    dispatch,
+    seekToTime,
+    setShowHelp,
+  );
   const { handleDragOver, handleDrop, handleFileChange } = useMediaFiles(
     dispatch,
     seekToTime,
+    suppressNextOpenFile,
   );
-
-  useElectronEvents(dispatch, seekToTime, setShowHelp);
 
   // タイトル更新
   useEffect(() => {
@@ -175,6 +183,17 @@ const VideoPlayer: React.FC = () => {
           {/* メディアプレーヤー */}
           {shouldShowPlayer && (
             <ReactPlayer
+              height="100%"
+              key={videoUrl}
+              loop={videoQueue.length <= 1}
+              muted={muted}
+              onDurationChange={(e: React.SyntheticEvent<HTMLVideoElement>) => {
+                const dur = e.currentTarget.duration;
+
+                if (Number.isFinite(dur)) {
+                  dispatch({ time: dur, type: "SET_DURATION" });
+                }
+              }}
               onEnded={() => {
                 if (videoQueue.length > 1) {
                   dispatch({ type: "NEXT" });
@@ -185,24 +204,19 @@ const VideoPlayer: React.FC = () => {
                   dispatch({ type: "SET_IS_PLAYING", value: true });
                 }
               }}
-              onProgress={({ playedSeconds }) => {
+              onPause={() => dispatch({ type: "SET_IS_PLAYING", value: false })}
+              onPlay={() => dispatch({ type: "SET_IS_PLAYING", value: true })}
+              onTimeUpdate={(e: React.SyntheticEvent<HTMLVideoElement>) => {
+                const playedSeconds = e.currentTarget.currentTime;
+
                 if (Math.abs(playedSeconds - currentTimeRef.current) > 0.25) {
                   dispatch({ time: playedSeconds, type: "SET_CURRENT_TIME" });
                   currentTimeRef.current = playedSeconds;
                 }
               }}
-              height="100%"
-              key={videoUrl}
-              loop={videoQueue.length <= 1}
-              muted={muted}
-              onDuration={(dur) =>
-                dispatch({ time: dur, type: "SET_DURATION" })
-              }
-              onPause={() => dispatch({ type: "SET_IS_PLAYING", value: false })}
-              onPlay={() => dispatch({ type: "SET_IS_PLAYING", value: true })}
               playing={isPlaying}
               ref={playerRef}
-              url={videoUrl}
+              src={videoUrl}
               volume={volume}
               width="100%"
             />

@@ -6,7 +6,7 @@ type KeyboardShortcutsProps = {
   currentTimeRef: React.MutableRefObject<number>;
   dispatch: React.Dispatch<VideoQueueAction>;
   duration: number;
-  fileInputRef: React.RefObject<HTMLInputElement>;
+  fileInputRef: React.RefObject<HTMLInputElement | null>;
   seekToTime: (time: number) => void;
   setShowHelp: React.Dispatch<React.SetStateAction<boolean>>;
   setShowInfo: React.Dispatch<React.SetStateAction<boolean>>;
@@ -161,7 +161,7 @@ export const useKeyboardShortcuts = ({
   }, [handleKeyDown]);
 
   // ショートカットリスト
-  const shortcuts = [
+  const shortcuts: [string, string][] = [
     ["Space", "Play / Pause"],
     ["S", "Stop"],
     ["A / D", "Previous / Next file"],

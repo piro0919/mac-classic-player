@@ -44,7 +44,7 @@ Or build it locally:
 git clone https://github.com/piro0919/mac-classic-player
 cd mac-classic-player
 npm install
-npm run start
+npm run dev
 ```
 
 ---
@@ -77,6 +77,6 @@ MIT — Feel free to fork and extend!
 
 ## 🙌 Credits
 
-Built with ❤️ using [Electron](https://www.electronjs.org/), [React](https://react.dev), and [lucide-react](https://lucide.dev)
+Built with ❤️ using [Tauri](https://tauri.app/), [React](https://react.dev), and [lucide-react](https://lucide.dev)
 
 Inspired by [Media Player Classic](https://mpc-hc.org/)
