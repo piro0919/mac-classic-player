@@ -351,25 +351,58 @@ pub fn run() {
 
             // アップデートの確認（バックグラウンドで実行）
             let update_handle = app.handle().clone();
+            let is_ja = is_japanese;
             tauri::async_runtime::spawn(async move {
-                if let Ok(updater) = update_handle.updater() {
-                    match updater.check().await {
-                        Ok(Some(update)) => {
-                            println!(
-                                "アップデートが見つかりました: v{}",
-                                update.version
-                            );
-                            // ダウンロードとインストールを実行
-                            let _ =
-                                update.download_and_install(|_, _| {}, || {}).await;
-                        }
-                        Ok(None) => {
-                            println!("最新バージョンです");
-                        }
-                        Err(e) => {
-                            eprintln!("アップデート確認エラー: {}", e);
-                        }
-                    }
+                let updater = match update_handle.updater() {
+                    Ok(u) => u,
+                    Err(_) => return,
+                };
+                let update = match updater.check().await {
+                    Ok(Some(u)) => u,
+                    _ => return,
+                };
+
+                // ユーザーにアップデートを確認するダイアログを表示
+                use tauri_plugin_dialog::DialogExt;
+                let msg = if is_ja {
+                    format!(
+                        "新しいバージョン v{} が利用可能です。\nアップデートしますか？",
+                        update.version
+                    )
+                } else {
+                    format!(
+                        "Version v{} is available.\nWould you like to update?",
+                        update.version
+                    )
+                };
+                let title = if is_ja { "アップデート" } else { "Update" };
+                let confirmed = update_handle
+                    .dialog()
+                    .message(msg)
+                    .title(title)
+                    .ok_button_label("OK")
+                    .cancel_button_label(if is_ja { "キャンセル" } else { "Cancel" })
+                    .blocking_show();
+
+                if !confirmed {
+                    return;
+                }
+
+                // ダウンロードとインストールを実行
+                if update.download_and_install(|_, _| {}, || {}).await.is_ok() {
+                    // インストール完了を通知し、アプリを終了する
+                    // （macOSではAppHandle::restart()が正常に動作しないため手動再起動）
+                    let done_msg = if is_ja {
+                        "アップデートが完了しました。\nアプリを再起動してください。"
+                    } else {
+                        "Update complete.\nPlease restart the app."
+                    };
+                    update_handle
+                        .dialog()
+                        .message(done_msg)
+                        .title(title)
+                        .blocking_show();
+                    update_handle.exit(0);
                 }
             });
 
