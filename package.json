@@ -97,7 +97,8 @@
     "prettier": "prettier --write .",
     "release": "npm run release:create && npm run release:upload",
     "release:create": "gh release create v$npm_package_version -t \"Release v$npm_package_version\" --generate-notes",
-    "release:upload": "gh release upload v$npm_package_version \"src-tauri/target/release/bundle/dmg/Mac Classic Player_${npm_package_version}_aarch64.dmg\" --clobber",
+    "release:generate-latest": "node -e \"const fs=require('fs');const v=process.env.npm_package_version;const sig=fs.readFileSync('src-tauri/target/release/bundle/macos/Mac Classic Player.app.tar.gz.sig','utf8').trim();const json={version:v,notes:'',pub_date:new Date().toISOString(),platforms:{'darwin-aarch64':{signature:sig,url:'https://github.com/piro0919/mac-classic-player/releases/download/v'+v+'/Mac Classic Player.app.tar.gz'}}};fs.writeFileSync('latest.json',JSON.stringify(json,null,2))\"",
+    "release:upload": "npm run release:generate-latest && gh release upload v$npm_package_version \"src-tauri/target/release/bundle/dmg/Mac Classic Player_${npm_package_version}_aarch64.dmg\" \"src-tauri/target/release/bundle/macos/Mac Classic Player.app.tar.gz\" \"src-tauri/target/release/bundle/macos/Mac Classic Player.app.tar.gz.sig\" latest.json --clobber",
     "type-check": "tsc --noEmit"
   },
   "version": "0.0.17"
