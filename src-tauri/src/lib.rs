@@ -376,12 +376,16 @@ pub fn run() {
                     )
                 };
                 let title = if is_ja { "アップデート" } else { "Update" };
+                use tauri_plugin_dialog::MessageDialogButtons;
+                let cancel_label = if is_ja { "キャンセル" } else { "Cancel" };
                 let confirmed = update_handle
                     .dialog()
                     .message(msg)
                     .title(title)
-                    .ok_button_label("OK")
-                    .cancel_button_label(if is_ja { "キャンセル" } else { "Cancel" })
+                    .buttons(MessageDialogButtons::OkCancelCustom(
+                        "OK".to_string(),
+                        cancel_label.to_string(),
+                    ))
                     .blocking_show();
 
                 if !confirmed {
