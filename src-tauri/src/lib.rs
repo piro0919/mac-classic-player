@@ -3,6 +3,7 @@
 
 use std::io::{BufRead, BufReader, Read, Seek, SeekFrom, Write};
 use std::net::TcpListener;
+use std::path::PathBuf;
 use std::sync::Mutex;
 use tauri::{
     menu::{MenuBuilder, MenuItemBuilder, PredefinedMenuItem, SubmenuBuilder},
@@ -21,6 +22,71 @@ struct OpenedFiles(Mutex<Vec<String>>);
 /// 大容量メディアファイルをRange request対応のHTTPで配信する
 struct StreamServerPort(u16);
 
+/// 最近使ったファイルの最大保持数
+const MAX_RECENT_FILES: usize = 10;
+
+/// 最近使ったファイルの永続化データ
+#[derive(serde::Serialize, serde::Deserialize, Default)]
+struct RecentFilesData {
+    paths: Vec<String>,
+}
+
+/// 最近使ったファイルの状態管理
+struct RecentFiles {
+    data: Mutex<RecentFilesData>,
+    config_path: PathBuf,
+    is_japanese: bool,
+}
+
+impl RecentFiles {
+    /// 設定ディレクトリからJSONを読み込んで初期化する
+    fn load(config_dir: &std::path::Path, is_japanese: bool) -> Self {
+        let config_path = config_dir.join("recent_files.json");
+        let data = std::fs::read_to_string(&config_path)
+            .ok()
+            .and_then(|s| serde_json::from_str::<RecentFilesData>(&s).ok())
+            .unwrap_or_default();
+        Self {
+            data: Mutex::new(data),
+            config_path,
+            is_japanese,
+        }
+    }
+
+    /// パスを追加（重複は先頭に移動、最大件数でtruncate）
+    fn add_paths(&self, new_paths: &[String]) {
+        let mut data = self.data.lock().unwrap();
+        for path in new_paths.iter().rev() {
+            data.paths.retain(|p| p != path);
+            data.paths.insert(0, path.clone());
+        }
+        data.paths.truncate(MAX_RECENT_FILES);
+        self.save_to_disk(&data);
+    }
+
+    /// 履歴をクリアする
+    fn clear(&self) {
+        let mut data = self.data.lock().unwrap();
+        data.paths.clear();
+        self.save_to_disk(&data);
+    }
+
+    /// 現在のパスリストを取得
+    fn get_paths(&self) -> Vec<String> {
+        self.data.lock().unwrap().paths.clone()
+    }
+
+    /// JSONファイルに保存
+    fn save_to_disk(&self, data: &RecentFilesData) {
+        if let Some(parent) = self.config_path.parent() {
+            let _ = std::fs::create_dir_all(parent);
+        }
+        if let Ok(json) = serde_json::to_string_pretty(data) {
+            let _ = std::fs::write(&self.config_path, json);
+        }
+    }
+}
+
 // =============================================================================
 // Tauriコマンド: フロントエンドから呼び出し可能な関数
 // =============================================================================
@@ -38,6 +104,16 @@ fn get_pending_files(state: tauri::State<OpenedFiles>) -> Vec<String> {
 #[tauri::command]
 fn get_stream_port(state: tauri::State<StreamServerPort>) -> u16 {
     state.0
+}
+
+/// フロントエンドからファイルパスを最近使ったファイルに追加する
+/// （ドラッグ&ドロップなど、Rust側でパスを取得できないケース用）
+#[tauri::command]
+fn add_recent_files(app: tauri::AppHandle, paths: Vec<String>) {
+    if let Some(recent) = app.try_state::<RecentFiles>() {
+        recent.add_paths(&paths);
+    }
+    rebuild_menu(&app);
 }
 
 // =============================================================================
@@ -185,6 +261,7 @@ fn stream_file_bytes(
 fn build_app_menu(
     app: &tauri::AppHandle,
     is_japanese: bool,
+    recent_paths: &[String],
 ) -> tauri::Result<tauri::menu::Menu<tauri::Wry>> {
     // --- アプリメニュー (macOSでは最初のサブメニューがアプリ名メニューになる) ---
     let quit_text = if is_japanese {
@@ -207,8 +284,42 @@ fn build_app_menu(
     let open_item = MenuItemBuilder::with_id("open_file", open_label)
         .accelerator("O")
         .build(app)?;
+
+    // 「最近使ったファイル」サブメニュー
+    let recent_label = if is_japanese {
+        "最近使ったファイル"
+    } else {
+        "Recent Files"
+    };
+    let mut recent_submenu = SubmenuBuilder::new(app, recent_label);
+    if recent_paths.is_empty() {
+        let empty_label = if is_japanese { "(なし)" } else { "(None)" };
+        let empty_item = MenuItemBuilder::with_id("recent_empty", empty_label)
+            .enabled(false)
+            .build(app)?;
+        recent_submenu = recent_submenu.item(&empty_item);
+    } else {
+        for (i, path) in recent_paths.iter().enumerate() {
+            let label = std::path::Path::new(path)
+                .file_name()
+                .and_then(|n| n.to_str())
+                .unwrap_or(path);
+            let item = MenuItemBuilder::with_id(format!("recent_{}", i), label).build(app)?;
+            recent_submenu = recent_submenu.item(&item);
+        }
+        let clear_label = if is_japanese {
+            "履歴をクリア"
+        } else {
+            "Clear History"
+        };
+        let clear_item = MenuItemBuilder::with_id("clear_recent", clear_label).build(app)?;
+        recent_submenu = recent_submenu.separator().item(&clear_item);
+    }
+    let recent_menu = recent_submenu.build()?;
+
     let file_menu = SubmenuBuilder::new(app, file_label)
         .item(&open_item)
+        .item(&recent_menu)
         .build()?;
 
     // --- ヘルプメニュー ---
@@ -243,6 +354,16 @@ fn build_app_menu(
     MenuBuilder::new(app)
         .items(&[&app_menu, &file_menu, &help_menu])
         .build()
+}
+
+/// RecentFilesの状態からメニューを再構築してセットする
+fn rebuild_menu(app_handle: &tauri::AppHandle) {
+    if let Some(recent) = app_handle.try_state::<RecentFiles>() {
+        let paths = recent.get_paths();
+        if let Ok(menu) = build_app_menu(app_handle, recent.is_japanese, &paths) {
+            let _ = app_handle.set_menu(menu);
+        }
+    }
 }
 
 // =============================================================================
@@ -280,15 +401,21 @@ pub fn run() {
         .manage(OpenedFiles(Mutex::new(Vec::new())))
         .manage(StreamServerPort(stream_port))
         // --- Tauriコマンドの登録 ---
-        .invoke_handler(tauri::generate_handler![get_pending_files, get_stream_port])
+        .invoke_handler(tauri::generate_handler![get_pending_files, get_stream_port, add_recent_files])
         // --- アプリのセットアップ ---
         .setup(|app| {
             // システムの言語設定を取得して日本語かどうか判定
             let locale = sys_locale::get_locale().unwrap_or_else(|| "en".to_string());
             let is_japanese = locale.starts_with("ja");
 
+            // 最近使ったファイルの読み込みと状態登録
+            let config_dir = app.path().app_config_dir()?;
+            let recent_files = RecentFiles::load(&config_dir, is_japanese);
+            let recent_paths = recent_files.get_paths();
+            app.manage(recent_files);
+
             // メニューの構築と設定
-            let menu = build_app_menu(app.handle(), is_japanese)?;
+            let menu = build_app_menu(app.handle(), is_japanese, &recent_paths)?;
             app.set_menu(menu)?;
 
             // ファイルダイアログ用のフィルター名を事前に用意
@@ -330,9 +457,21 @@ pub fn run() {
                                 if !paths.is_empty() {
                                     // フロントエンドにファイルパスを送信
                                     let _ = handle.emit("open-file", &paths);
+                                    // 最近使ったファイルに追加
+                                    if let Some(recent) = handle.try_state::<RecentFiles>() {
+                                        recent.add_paths(&paths);
+                                    }
+                                    rebuild_menu(&handle);
                                 }
                             }
                         });
+                    }
+                    "clear_recent" => {
+                        // 最近使ったファイルの履歴をクリア
+                        if let Some(recent) = app_handle.try_state::<RecentFiles>() {
+                            recent.clear();
+                        }
+                        rebuild_menu(&app_handle);
                     }
                     "toggle_help" => {
                         // ヘルプ表示のトグルをフロントエンドに送信
@@ -356,7 +495,22 @@ pub fn run() {
                                 None::<&str>,
                             );
                     }
-                    _ => {}
+                    _ => {
+                        // 最近使ったファイルのクリックハンドラ (recent_0, recent_1, ...)
+                        if let Some(index_str) = id.strip_prefix("recent_") {
+                            if let Ok(index) = index_str.parse::<usize>() {
+                                if let Some(recent) = app_handle.try_state::<RecentFiles>() {
+                                    let paths = recent.get_paths();
+                                    if let Some(path) = paths.get(index) {
+                                        let path_vec = vec![path.clone()];
+                                        let _ = app_handle.emit("open-file", &path_vec);
+                                        recent.add_paths(&path_vec);
+                                        rebuild_menu(&app_handle);
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             });
 
@@ -454,6 +608,12 @@ pub fn run() {
             if paths.is_empty() {
                 return;
             }
+
+            // 最近使ったファイルに追加
+            if let Some(recent) = app_handle.try_state::<RecentFiles>() {
+                recent.add_paths(&paths);
+            }
+            rebuild_menu(app_handle);
 
             // メインウィンドウが存在するか確認
             if let Some(window) = app_handle.get_webview_window("main") {

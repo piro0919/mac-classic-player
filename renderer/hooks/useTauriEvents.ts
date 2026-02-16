@@ -202,6 +202,7 @@ export const useTauriEvents = (
         if (mediaPaths.length === 0) return;
 
         loadAndPlayFiles(mediaPaths, dispatch, seekToTime);
+        invoke("add_recent_files", { paths: mediaPaths });
       })
       .then((fn) => {
         unlisten = fn;
