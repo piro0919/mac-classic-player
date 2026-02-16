@@ -6,7 +6,7 @@ use std::net::TcpListener;
 use std::path::PathBuf;
 use std::sync::Mutex;
 use tauri::{
-    menu::{MenuBuilder, MenuItemBuilder, PredefinedMenuItem, SubmenuBuilder},
+    menu::{AboutMetadata, MenuBuilder, MenuItemBuilder, PredefinedMenuItem, SubmenuBuilder},
     Emitter, Manager, RunEvent,
 };
 use tauri_plugin_updater::UpdaterExt;
@@ -263,13 +263,56 @@ fn build_app_menu(
     is_japanese: bool,
     recent_paths: &[String],
 ) -> tauri::Result<tauri::menu::Menu<tauri::Wry>> {
-    // --- アプリメニュー (macOSでは最初のサブメニューがアプリ名メニューになる) ---
+    // --- アプリメニュー ---
     let quit_text = if is_japanese {
         "Mac Classic Player を終了"
     } else {
         "Quit Mac Classic Player"
     };
+    let version = app.package_info().version.to_string();
+    let about_metadata = AboutMetadata {
+        name: Some("Mac Classic Player".to_string()),
+        version: Some(version),
+        ..Default::default()
+    };
+    let about_text = if is_japanese {
+        "Mac Classic Player について"
+    } else {
+        "About Mac Classic Player"
+    };
+    let services_text = if is_japanese {
+        "サービス"
+    } else {
+        "Services"
+    };
+    let hide_text = if is_japanese {
+        "Mac Classic Player を隠す"
+    } else {
+        "Hide Mac Classic Player"
+    };
+    let hide_others_text = if is_japanese {
+        "その他を隠す"
+    } else {
+        "Hide Others"
+    };
+    let show_all_text = if is_japanese {
+        "すべて表示"
+    } else {
+        "Show All"
+    };
     let app_menu = SubmenuBuilder::new(app, "Mac Classic Player")
+        .item(&PredefinedMenuItem::about(app, Some(about_text), Some(about_metadata))?)
+        .separator()
+        .item(
+            &SubmenuBuilder::new(app, services_text)
+                .services()
+                .build()?,
+        )
+        .separator()
+        .item(&PredefinedMenuItem::hide(app, Some(hide_text))?)
+        .item(&PredefinedMenuItem::hide_others(app, Some(hide_others_text))?)
+        .item(&PredefinedMenuItem::show_all(app, Some(show_all_text))?)
+        .separator()
         .item(&PredefinedMenuItem::quit(app, Some(quit_text))?)
         .build()?;
 
@@ -280,9 +323,8 @@ fn build_app_menu(
     } else {
         "Open File…"
     };
-    // 「ファイルを開く」メニュー項目（ショートカットキー: O）
     let open_item = MenuItemBuilder::with_id("open_file", open_label)
-        .accelerator("O")
+        .accelerator("CmdOrCtrl+O")
         .build(app)?;
 
     // 「最近使ったファイル」サブメニュー
@@ -317,9 +359,40 @@ fn build_app_menu(
     }
     let recent_menu = recent_submenu.build()?;
 
+    let close_text = if is_japanese {
+        "ウインドウを閉じる"
+    } else {
+        "Close Window"
+    };
     let file_menu = SubmenuBuilder::new(app, file_label)
         .item(&open_item)
         .item(&recent_menu)
+        .separator()
+        .item(&PredefinedMenuItem::close_window(app, Some(close_text))?)
+        .build()?;
+
+    // --- ウインドウメニュー ---
+    let window_label = if is_japanese {
+        "ウインドウ"
+    } else {
+        "Window"
+    };
+    let minimize_text = if is_japanese { "しまう" } else { "Minimize" };
+    let zoom_text = if is_japanese {
+        "拡大/縮小"
+    } else {
+        "Zoom"
+    };
+    let fullscreen_text = if is_japanese {
+        "フルスクリーンにする"
+    } else {
+        "Enter Full Screen"
+    };
+    let window_menu = SubmenuBuilder::new(app, window_label)
+        .item(&PredefinedMenuItem::minimize(app, Some(minimize_text))?)
+        .item(&PredefinedMenuItem::maximize(app, Some(zoom_text))?)
+        .separator()
+        .item(&PredefinedMenuItem::fullscreen(app, Some(fullscreen_text))?)
         .build()?;
 
     // --- ヘルプメニュー ---
@@ -329,30 +402,20 @@ fn build_app_menu(
     } else {
         "Show Shortcuts Help"
     };
-    let version_label = if is_japanese {
-        "バージョン情報"
-    } else {
-        "About Version"
-    };
-
     let shortcuts_item = MenuItemBuilder::with_id("toggle_help", shortcuts_label)
         .accelerator("?")
         .build(app)?;
-    let version_item =
-        MenuItemBuilder::with_id("about_version", version_label).build(app)?;
     let github_item = MenuItemBuilder::with_id("open_github", "GitHub").build(app)?;
 
     let help_menu = SubmenuBuilder::new(app, help_label)
         .item(&shortcuts_item)
-        .separator()
-        .item(&version_item)
         .separator()
         .item(&github_item)
         .build()?;
 
     // --- メニューバー全体を構築 ---
     MenuBuilder::new(app)
-        .items(&[&app_menu, &file_menu, &help_menu])
+        .items(&[&app_menu, &file_menu, &window_menu, &help_menu])
         .build()
 }
 
@@ -476,16 +539,6 @@ pub fn run() {
                     "toggle_help" => {
                         // ヘルプ表示のトグルをフロントエンドに送信
                         let _ = app_handle.emit("toggle-help", ());
-                    }
-                    "about_version" => {
-                        // バージョン情報ダイアログを表示
-                        use tauri_plugin_dialog::DialogExt;
-                        let version = app_handle.package_info().version.to_string();
-                        app_handle
-                            .dialog()
-                            .message(format!("Mac Classic Player\nv{}", version))
-                            .title("Version")
-                            .blocking_show();
                     }
                     "open_github" => {
                         // GitHubページを外部ブラウザで開く

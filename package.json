@@ -101,5 +101,5 @@
     "release:upload": "npm run release:generate-latest && gh release upload v$npm_package_version \"src-tauri/target/release/bundle/dmg/Mac Classic Player_${npm_package_version}_aarch64.dmg\" \"src-tauri/target/release/bundle/macos/Mac Classic Player.app.tar.gz\" \"src-tauri/target/release/bundle/macos/Mac Classic Player.app.tar.gz.sig\" latest.json --clobber",
     "type-check": "tsc --noEmit"
   },
-  "version": "0.2.1"
+  "version": "0.3.0"
 }
