@@ -557,9 +557,35 @@ pub fn run() {
                     return;
                 }
 
-                // ダウンロードとインストールを実行
-                match update.download_and_install(|_, _| {}, || {}).await {
+                // ダウンロードを実行（インストールと分離してエラーを特定しやすくする）
+                eprintln!("[updater] ダウンロード開始: v{}", update.version);
+                let bytes = match update.download(|chunk_len, total| {
+                    eprintln!("[updater] ダウンロード中: {} / {:?} bytes", chunk_len, total);
+                }, || {
+                    eprintln!("[updater] ダウンロード完了");
+                }).await {
+                    Ok(b) => b,
+                    Err(e) => {
+                        eprintln!("[updater] ダウンロードエラー: {}", e);
+                        let err_msg = if is_ja {
+                            format!("ダウンロードに失敗しました。\n{}", e)
+                        } else {
+                            format!("Download failed.\n{}", e)
+                        };
+                        update_handle
+                            .dialog()
+                            .message(err_msg)
+                            .title(title)
+                            .blocking_show();
+                        return;
+                    }
+                };
+
+                // インストールを実行
+                eprintln!("[updater] インストール開始 ({} bytes)", bytes.len());
+                match update.install(bytes) {
                     Ok(_) => {
+                        eprintln!("[updater] インストール成功");
                         // インストール完了を通知し、アプリを終了する
                         // （macOSではAppHandle::restart()が正常に動作しないため手動再起動）
                         let done_msg = if is_ja {
@@ -575,10 +601,11 @@ pub fn run() {
                         update_handle.exit(0);
                     }
                     Err(e) => {
+                        eprintln!("[updater] インストールエラー: {}", e);
                         let err_msg = if is_ja {
-                            format!("アップデートに失敗しました。\n{}", e)
+                            format!("インストールに失敗しました。\n{}", e)
                         } else {
-                            format!("Update failed.\n{}", e)
+                            format!("Installation failed.\n{}", e)
                         };
                         update_handle
                             .dialog()
