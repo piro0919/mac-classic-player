@@ -51,7 +51,7 @@
     "eslint-plugin-promise": "7.2.1",
     "eslint-plugin-react": "7.37.5",
     "eslint-plugin-react-hooks": "7.0.1",
-    "eslint-plugin-security": "3.0.1",
+    "eslint-plugin-security": "4.0.0",
     "eslint-plugin-unused-imports": "4.4.1",
     "eslint-plugin-write-good-comments": "0.2.0",
     "lefthook": "2.1.1",
