@@ -31,7 +31,7 @@
     "@eslint/js": "9.39.3",
     "@secretlint/secretlint-rule-preset-recommend": "11.3.1",
     "@tauri-apps/cli": "2.10.0",
-    "@types/node": "24.10.15",
+    "@types/node": "24.11.0",
     "@types/react": "19.2.14",
     "@types/react-dom": "19.2.3",
     "@typescript-eslint/eslint-plugin": "8.56.1",
