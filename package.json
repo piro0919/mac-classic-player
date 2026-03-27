@@ -34,8 +34,8 @@
     "@types/node": "24.12.0",
     "@types/react": "19.2.14",
     "@types/react-dom": "19.2.3",
-    "@typescript-eslint/eslint-plugin": "8.57.1",
-    "@typescript-eslint/parser": "8.57.1",
+    "@typescript-eslint/eslint-plugin": "8.57.2",
+    "@typescript-eslint/parser": "8.57.2",
     "@uphold/commitlint-config": "1.1.1",
     "@vitejs/plugin-react": "6.0.1",
     "dotenv-cli": "11.0.0",
@@ -66,7 +66,7 @@
     "stylelint-no-unused-selectors": "1.0.40",
     "stylelint-order": "8.1.1",
     "typescript": "5.9.3",
-    "vite": "8.0.1"
+    "vite": "8.0.3"
   },
   "keywords": [],
   "license": "ISC",
