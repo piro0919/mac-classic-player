@@ -14,7 +14,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.2.2",
-    "typescript": "^5"
+    "typescript": "^6.0.0"
   },
   "name": "mac-classic-player-lp",
   "private": true,
