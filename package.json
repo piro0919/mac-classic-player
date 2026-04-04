@@ -65,7 +65,7 @@
     "stylelint-high-performance-animation": "1.11.0",
     "stylelint-no-unused-selectors": "1.0.40",
     "stylelint-order": "8.1.1",
-    "typescript": "5.9.3",
+    "typescript": "6.0.2",
     "vite": "8.0.3"
   },
   "keywords": [],
