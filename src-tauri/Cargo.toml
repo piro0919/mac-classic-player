@@ -10,7 +10,7 @@ name = "mac_classic_player_lib"
 crate-type = ["lib", "cdylib", "staticlib"]
 
 [build-dependencies]
-tauri-build = { version = "2", features = [] }
+tauri-build = { version = "2.5.6", features = [] }
 
 [dependencies]
 tauri = { version = "2", features = [] }
