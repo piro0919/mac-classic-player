@@ -2,10 +2,14 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { readFile, stat } from "@tauri-apps/plugin-fs";
-import { parseBuffer } from "music-metadata-browser";
 import { useEffect, useRef } from "react";
 import type { VideoQueueAction } from "../store/videoQueueReducer";
 import type { VideoItem } from "../types/videoTypes";
+import {
+  AUDIO_EXTENSIONS,
+  parseAudioMetadata,
+  parseFileName,
+} from "../utils/mediaFile";
 
 // MIMEタイプのマッピング
 const MIME_MAP: Record<string, string> = {
@@ -17,17 +21,10 @@ const MIME_MAP: Record<string, string> = {
 };
 
 const MEDIA_EXTENSIONS = ["mp4", "mov", "mp3", "m4a", "wav"];
-const AUDIO_EXTENSIONS = ["mp3", "m4a", "aac", "flac", "wav"];
 
-// ファイルパスから拡張子とベース名を抽出するヘルパー関数
-const parseFilePath = (filePath: string): { baseName: string; ext: string } => {
-  const fileName = filePath.split("/").pop() || "";
-  const match = fileName.match(/^(.+)\.([^.]+)$/);
-
-  return match
-    ? { baseName: match[1], ext: match[2].toLowerCase() }
-    : { baseName: fileName, ext: "" };
-};
+// ファイルパスから拡張子とベース名を抽出する
+const parseFilePath = (filePath: string): { baseName: string; ext: string } =>
+  parseFileName(filePath.split("/").pop() || "");
 
 // Blob URLでメモリに読み込む上限（500MB）
 // これを超えるファイルはローカルHTTPサーバー経由でストリーミング再生する
@@ -72,11 +69,7 @@ const filePathToVideoItem = async (filePath: string): Promise<VideoItem> => {
 
     // 音声ファイルの場合、メタデータも解析する
     if (AUDIO_EXTENSIONS.includes(ext)) {
-      try {
-        metadata = await parseBuffer(contents, { mimeType: mime });
-      } catch {
-        // メタデータ解析に失敗しても再生には影響しない
-      }
+      metadata = await parseAudioMetadata(contents, mime);
     }
   }
 

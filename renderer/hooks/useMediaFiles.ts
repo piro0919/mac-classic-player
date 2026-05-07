@@ -1,9 +1,11 @@
-import { parseBuffer } from "music-metadata-browser";
 import { useCallback, useEffect, useState } from "react";
 import type { VideoQueueAction } from "../store/videoQueueReducer";
 import type { VideoItem } from "../types/videoTypes";
-
-const AUDIO_EXTENSIONS = ["mp3", "m4a", "aac", "flac", "wav"];
+import {
+  AUDIO_EXTENSIONS,
+  parseAudioMetadata,
+  parseFileName,
+} from "../utils/mediaFile";
 
 // URL.createObjectURLで作成したオブジェクトを追跡
 const createdObjectUrls: string[] = [];
@@ -20,13 +22,6 @@ export const cleanupObjectUrls = () => {
   createdObjectUrls.length = 0;
 };
 
-// ファイル名から拡張子とベース名を抽出
-const parseFileName = (fileName: string): [string, string] => {
-  const match = fileName.match(/^(.+)\.([^.]+)$/);
-
-  return match ? [match[1], match[2].toLowerCase()] : [fileName, ""];
-};
-
 // BlobからオブジェクトURLを作成し、追跡
 const createAndTrackObjectURL = (blob: Blob): string => {
   const url = URL.createObjectURL(blob);
@@ -38,20 +33,16 @@ const createAndTrackObjectURL = (blob: Blob): string => {
 
 // FileオブジェクトからVideoItemを作成する（音声ファイルはメタデータも解析）
 const fileToVideoItem = async (file: File): Promise<VideoItem> => {
-  const [baseName, ext] = parseFileName(file.name);
+  const { baseName, ext } = parseFileName(file.name);
   const url = createAndTrackObjectURL(file);
   const item: VideoItem = { ext, name: baseName, url: `${url}#.${ext}` };
 
   // 音声ファイルの場合、ArrayBufferからメタデータを解析
   // （WKWebViewではBlob.stream()が正常に動作しないため、parseBufferを使う）
   if (AUDIO_EXTENSIONS.includes(ext)) {
-    try {
-      const buffer = new Uint8Array(await file.arrayBuffer());
+    const buffer = new Uint8Array(await file.arrayBuffer());
 
-      item.metadata = await parseBuffer(buffer, { mimeType: file.type });
-    } catch {
-      // メタデータ解析に失敗しても再生には影響しない
-    }
+    item.metadata = await parseAudioMetadata(buffer, file.type);
   }
 
   return item;
