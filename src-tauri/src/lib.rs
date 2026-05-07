@@ -9,7 +9,19 @@ use tauri::{
     menu::{AboutMetadata, MenuBuilder, MenuItemBuilder, PredefinedMenuItem, SubmenuBuilder},
     Emitter, Manager, RunEvent,
 };
+use tauri_plugin_fs::FsExt;
 use tauri_plugin_updater::UpdaterExt;
+
+/// 受信したファイルパスをfsプラグインのランタイムscopeに動的追加する
+/// capabilitiesの静的scope（globベース）はdot-prefixedディレクトリ
+/// （例: `/Volumes/HIKSEMI/.CloudStorage/...`）を含むパスにマッチしないため、
+/// ユーザーが明示的に開いたファイルは個別に許可する必要がある
+fn allow_paths_in_fs_scope<R: tauri::Runtime, M: Manager<R>>(manager: &M, paths: &[String]) {
+    let scope = manager.fs_scope();
+    for p in paths {
+        let _ = scope.allow_file(std::path::Path::new(p));
+    }
+}
 
 // =============================================================================
 // アプリ状態の定義
@@ -518,6 +530,7 @@ pub fn run() {
                                     })
                                     .collect();
                                 if !paths.is_empty() {
+                                    allow_paths_in_fs_scope(&handle, &paths);
                                     // フロントエンドにファイルパスを送信
                                     let _ = handle.emit("open-file", &paths);
                                     // 最近使ったファイルに追加
@@ -556,6 +569,7 @@ pub fn run() {
                                     let paths = recent.get_paths();
                                     if let Some(path) = paths.get(index) {
                                         let path_vec = vec![path.clone()];
+                                        allow_paths_in_fs_scope(&app_handle, &path_vec);
                                         let _ = app_handle.emit("open-file", &path_vec);
                                         recent.add_paths(&path_vec);
                                         rebuild_menu(&app_handle);
@@ -688,6 +702,8 @@ pub fn run() {
             if paths.is_empty() {
                 return;
             }
+
+            allow_paths_in_fs_scope(app_handle, &paths);
 
             // 最近使ったファイルに追加
             if let Some(recent) = app_handle.try_state::<RecentFiles>() {
