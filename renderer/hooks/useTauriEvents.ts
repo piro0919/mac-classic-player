@@ -138,7 +138,10 @@ export const useTauriEvents = (
   // Rustバックエンドからの「open-file」イベントを受信する
   // メニューの「ファイルを開く」や、macOSの「ファイルで開く」で発火
   useEffect(() => {
+    // listen()のPromiseが解決する前にcleanupが走るとunlistenがundefinedのまま
+    // リスナーが残ってしまうため、cancelledフラグで取りこぼしを防ぐ
     let unlisten: (() => void) | undefined;
+    let cancelled = false;
 
     listen<string[]>("open-file", (event) => {
       if (ignoreNextOpenFileRef.current) {
@@ -153,10 +156,12 @@ export const useTauriEvents = (
 
       loadAndPlayFiles(filePaths, dispatch, seekToTime);
     }).then((fn) => {
-      unlisten = fn;
+      if (cancelled) fn();
+      else unlisten = fn;
     });
 
     return () => {
+      cancelled = true;
       unlisten?.();
     };
   }, [dispatch, seekToTime]);
@@ -165,14 +170,17 @@ export const useTauriEvents = (
   // メニューの「ショートカット一覧を表示」で発火
   useEffect(() => {
     let unlisten: (() => void) | undefined;
+    let cancelled = false;
 
     listen("toggle-help", () => {
       setShowHelp((prev) => !prev);
     }).then((fn) => {
-      unlisten = fn;
+      if (cancelled) fn();
+      else unlisten = fn;
     });
 
     return () => {
+      cancelled = true;
       unlisten?.();
     };
   }, [setShowHelp]);
@@ -181,6 +189,7 @@ export const useTauriEvents = (
   // Tauri v2ではブラウザのdropイベントではなく、ネイティブイベントでファイルパスが渡される
   useEffect(() => {
     let unlisten: (() => void) | undefined;
+    let cancelled = false;
 
     getCurrentWebview()
       .onDragDropEvent((event: { payload: { paths?: string[]; type: string } }) => {
@@ -198,10 +207,12 @@ export const useTauriEvents = (
         invoke("add_recent_files", { paths: mediaPaths });
       })
       .then((fn) => {
-        unlisten = fn;
+        if (cancelled) fn();
+        else unlisten = fn;
       });
 
     return () => {
+      cancelled = true;
       unlisten?.();
     };
   }, [dispatch, seekToTime]);
