@@ -2,7 +2,7 @@
   "dependencies": {
     "motion": "12.43.0",
     "lucide-react": "0.577.0",
-    "next": "16.3.0",
+    "next": "16.3.1",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "ress": "5.0.2"
