@@ -69,7 +69,7 @@
     "vite": "8.2.1"
   },
   "keywords": [],
-  "license": "ISC",
+  "license": "MIT",
   "name": "mac-classic-player",
   "overrides": {
     "stylelint-css-modules-no-global-scoped-selector": {
