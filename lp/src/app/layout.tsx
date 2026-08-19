@@ -7,6 +7,8 @@ const description =
   "A lightweight, keyboard-friendly media player for macOS — inspired by Media Player Classic.";
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://mcp.kkweb.io"),
+  alternates: { canonical: "/" },
   title,
   description,
   openGraph: {
