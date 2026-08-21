@@ -3,7 +3,7 @@
     "@vercel/analytics": "^2.0.1",
     "lucide-react": "0.577.0",
     "motion": "12.43.0",
-    "next": "16.3.1",
+    "next": "16.3.2",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "ress": "5.0.2"
