@@ -1,10 +1,17 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { ImageResponse } from "next/og";
+import { routing } from "@/i18n/routing";
 
 export const alt = "Mac Classic Player";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
+
+/* ビルド時に焼く。動的なままだと public/ が関数側に含まれず、
+   本番で icon.png を読めずに 500 になる */
+export function generateStaticParams(): { locale: string }[] {
+  return routing.locales.map((locale) => ({ locale }));
+}
 
 /* 実際に出るのは kk-web の一覧で176px、X のカードで500px 前後。
    その大きさで残るのはアイコンと名前と1行だけなので、それしか置かない。
