@@ -64,7 +64,7 @@ export default async function Page({ params }: PageProps) {
               </p>
               <div className="mt-8 flex flex-wrap items-center gap-3">
                 <a
-                  className="bg-ink px-7 py-3.5 font-bold text-deck transition hover:bg-signal"
+                  className="bg-signal px-7 py-3.5 font-bold text-deck transition hover:bg-ink"
                   href={DOWNLOAD}
                 >
                   {t("hero.download")}
@@ -128,13 +128,13 @@ export default async function Page({ params }: PageProps) {
         </div>
       </section>
 
-      <section className="bg-ink px-6 py-16 text-deck">
+      <section className="bg-deck-2 px-6 py-16">
         <div className="mx-auto flex max-w-5xl flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
           <p className="max-w-md text-balance font-display font-bold text-2xl leading-snug">
             {t("hero.title")}
           </p>
           <a
-            className="cap shrink-0 px-7 py-3.5 font-bold text-ink"
+            className="shrink-0 bg-signal px-7 py-3.5 font-bold text-deck transition hover:bg-ink"
             href={DOWNLOAD}
           >
             {t("hero.download")}

@@ -1,17 +1,16 @@
 @import "tailwindcss";
 
 @theme {
-  /* キーボードのデッキ。灰の樹脂に黒い刻印、差し色はアイコンの青緑 */
-  --color-deck: #e7e5e0;
-  --color-deck-2: #dedbd4;
-  --color-cap: #f6f5f2;
-  --color-ink: #14181d;
-  --color-ink-2: #5b6167;
-  --color-signal: #1f7d7d;
-  --color-slate: #17222c;
-  --color-abyss: #0a1017;
-  --color-line: #cbc7bf;
-  --font-display: var(--font-display);
+  /* 色はアプリのアイコンから取る。濃紺の地に青緑の棒、というのがこのアプリの顔。
+     デッキは暗いキーボードで、キートップは地より少し明るい面になる */
+  --color-deck: #0d161e;
+  --color-deck-2: #121d27;
+  --color-cap: #1d2a35;
+  --color-cap-edge: #0a1219;
+  --color-ink: #e8eef2;
+  --color-ink-2: #9fb2c0;
+  --color-signal: #3fb6b6;
+  --color-line: #24323f;
 }
 
 html {
@@ -28,16 +27,17 @@ body {
 }
 
 ::selection {
-  background: color-mix(in srgb, var(--color-signal) 30%, transparent);
+  background: color-mix(in srgb, var(--color-signal) 35%, transparent);
 }
 
 /* キートップ。押し込める厚みを影ではなく下の縁で出す */
 .cap {
   background: var(--color-cap);
   border: 1px solid var(--color-line);
+  border-bottom-color: var(--color-cap-edge);
   border-bottom-width: 4px;
   border-radius: 6px;
-  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.8) inset;
+  box-shadow: 0 1px 0 rgb(255 255 255 / 6%) inset;
 }
 
 a.cap:active,
