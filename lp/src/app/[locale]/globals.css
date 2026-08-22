@@ -1,13 +1,16 @@
 @import "tailwindcss";
 
 @theme {
-  /* アイコンの配色をそのまま持ってくる。濃い青灰に、棒グラフの青緑 */
+  /* キーボードのデッキ。灰の樹脂に黒い刻印、差し色はアイコンの青緑 */
+  --color-deck: #e7e5e0;
+  --color-deck-2: #dedbd4;
+  --color-cap: #f6f5f2;
+  --color-ink: #14181d;
+  --color-ink-2: #5b6167;
+  --color-signal: #1f7d7d;
   --color-slate: #17222c;
   --color-abyss: #0a1017;
-  --color-signal: #2e9b9b;
-  --color-ink: #14181d;
-  --color-paper: #f3f4f5;
-  --color-line: #e0e2e5;
+  --color-line: #cbc7bf;
 }
 
 html {
@@ -15,7 +18,7 @@ html {
 }
 
 body {
-  background: var(--color-paper);
+  background: var(--color-deck);
   color: var(--color-ink);
 
   /* 日本語を語のまとまりで折り返す。これが無いと見出しが「を、」や
@@ -23,7 +26,21 @@ body {
   word-break: auto-phrase;
 }
 
-/* 見出しの帯。アプリのウィンドウと同じ暗さに合わせる */
-.brand {
-  background: linear-gradient(160deg, var(--color-slate) 0%, var(--color-abyss) 100%);
+::selection {
+  background: color-mix(in srgb, var(--color-signal) 30%, transparent);
+}
+
+/* キートップ。押し込める厚みを影ではなく下の縁で出す */
+.cap {
+  background: var(--color-cap);
+  border: 1px solid var(--color-line);
+  border-bottom-width: 4px;
+  border-radius: 6px;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.8) inset;
+}
+
+a.cap:active,
+button.cap:active {
+  border-bottom-width: 1px;
+  transform: translateY(3px);
 }

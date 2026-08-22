@@ -6,6 +6,8 @@ import { LanguageSwitch } from "./language-switch";
 const REPO = "https://github.com/piro0919/mac-classic-player";
 const DOWNLOAD = `${REPO}/releases/latest`;
 
+const FORMATS = [".mov", ".mp4", ".webm", ".mp3", ".m4a", ".wav"];
+
 type Item = { title: string; body: string };
 type Key = { key: string; action: string };
 
@@ -21,97 +23,126 @@ export default async function Page({ params }: PageProps) {
 
   return (
     <>
-      {/* 見出し。文章より先に、動いている実物を見せる */}
-      <header className="brand px-6 pt-8 pb-0 text-white">
-        <div className="mx-auto flex max-w-5xl items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Image
-              alt=""
-              className="rounded-[24%]"
-              height={32}
-              src="/icon.png"
-              width={32}
-            />
-            <span className="font-bold text-lg tracking-tight">
-              Mac Classic Player
-            </span>
-          </div>
-          <LanguageSwitch />
-        </div>
-
-        <div className="mx-auto mt-14 max-w-3xl text-center">
-          <h1 className="text-balance font-bold text-4xl leading-tight tracking-tight sm:text-5xl">
-            {t("hero.title")}
-          </h1>
-          <p className="mt-5 text-pretty text-lg text-white/85 leading-relaxed">
-            {t("hero.tagline")}
-          </p>
-
-          <div className="mt-9 flex flex-wrap items-center justify-center gap-4">
-            <a
-              className="rounded-full bg-white px-8 py-3.5 font-bold text-abyss transition hover:bg-white/90"
-              href={DOWNLOAD}
-            >
-              {t("hero.download")}
-            </a>
-            <a
-              className="rounded-full border border-white/50 px-8 py-3.5 font-bold transition hover:bg-white/10"
-              href={REPO}
-            >
-              {t("hero.source")}
-            </a>
-          </div>
-          <p className="mt-4 text-sm text-white/60">{t("hero.note")}</p>
-        </div>
-
-        {/* 起動した直後の窓。これがそのまま再生画面になる */}
-        <div className="mx-auto mt-14 max-w-4xl">
+      <header className="mx-auto flex max-w-5xl items-center justify-between px-6 py-6">
+        <div className="flex items-center gap-3">
           <Image
-            alt={t("screens.window")}
-            className="w-full translate-y-px rounded-t-2xl"
-            height={505}
-            priority={true}
-            quality={100}
-            src="/screenshot-empty.png"
-            width={820}
+            alt=""
+            className="rounded-[24%]"
+            height={28}
+            src="/icon.png"
+            width={28}
           />
+          <span className="font-bold text-sm tracking-tight">
+            Mac Classic Player
+          </span>
         </div>
+        <LanguageSwitch />
       </header>
 
-      {/* することは4つ。枠で囲まず、青緑の罫だけで区切る */}
-      <section className="px-6 py-20">
+      {/* 見出しに窓を重ねる。文章より先に、押すものと映るものを見せる */}
+      <section className="overflow-hidden px-6 pt-8 pb-16">
+        <div className="mx-auto max-w-5xl">
+          <h1 className="max-w-3xl text-balance font-bold text-4xl leading-[1.15] tracking-tight sm:text-6xl">
+            {t("hero.title")}
+          </h1>
+
+          <div className="mt-8 flex flex-wrap gap-2">
+            {FORMATS.map((ext) => (
+              <span
+                className="cap px-3 py-1.5 font-mono text-ink-2 text-xs"
+                key={ext}
+              >
+                {ext}
+              </span>
+            ))}
+          </div>
+
+          <div className="mt-10 grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)] lg:items-start">
+            <div className="min-w-0">
+              <p className="text-pretty text-ink-2 leading-relaxed">
+                {t("hero.tagline")}
+              </p>
+              <div className="mt-8 flex flex-wrap items-center gap-3">
+                <a
+                  className="bg-ink px-7 py-3.5 font-bold text-deck transition hover:bg-signal"
+                  href={DOWNLOAD}
+                >
+                  {t("hero.download")}
+                </a>
+                <a className="cap px-7 py-3.5 font-bold text-ink" href={REPO}>
+                  {t("hero.source")}
+                </a>
+              </div>
+              <p className="mt-5 text-ink-2 text-sm">{t("hero.note")}</p>
+            </div>
+
+            {/* 窓は右端で裁ち落とす。全体を収めると中央のスクショに戻る */}
+            <div className="-mr-10 min-w-0 sm:-mr-16 lg:-mr-24">
+              <Image
+                alt={t("screens.window")}
+                className="w-full"
+                height={505}
+                priority={true}
+                quality={100}
+                src="/screenshot-empty.png"
+                width={820}
+              />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* することは4つ。番号を振って並べる */}
+      <section className="border-line border-t px-6 py-16">
         <div className="mx-auto grid max-w-5xl gap-x-12 gap-y-10 sm:grid-cols-2">
-          {features.map((item) => (
-            <div className="border-signal border-l-2 pl-5" key={item.title}>
-              <h2 className="font-bold text-xl">{item.title}</h2>
-              <p className="mt-3 text-ink/70 leading-relaxed">{item.body}</p>
+          {features.map((item, i) => (
+            <div key={item.title}>
+              <span className="font-mono text-signal text-xs">
+                {String(i + 1).padStart(2, "0")}
+              </span>
+              <h2 className="mt-3 font-bold text-xl">{item.title}</h2>
+              <p className="mt-3 text-ink-2 leading-relaxed">{item.body}</p>
             </div>
           ))}
         </div>
       </section>
 
-      {/* このアプリの芯はキー操作なので、一覧を文字で置く */}
-      <section className="border-line border-t px-6 py-20">
+      {/* このアプリの芯はキー操作なので、キートップそのものを並べる */}
+      <section className="border-line border-t px-6 py-16">
         <div className="mx-auto max-w-5xl">
           <h2 className="font-bold text-xl">{t("shortcuts.title")}</h2>
-          <dl className="mt-8 grid gap-x-12 gap-y-4 sm:grid-cols-2">
+          <dl className="mt-8 grid gap-x-12 gap-y-3 sm:grid-cols-2">
             {keys.map((one) => (
               <div
-                className="border-line flex items-baseline gap-4 border-b pb-3"
+                className="flex items-center gap-4 border-line border-b py-2.5"
                 key={one.key}
               >
-                <dt className="min-w-24 font-bold text-sm tracking-tight">
+                <dt className="cap min-w-24 px-3 py-1.5 text-center font-bold font-mono text-sm">
                   {one.key}
                 </dt>
-                <dd className="text-ink/70">{one.action}</dd>
+                <dd className="text-ink-2">{one.action}</dd>
               </div>
             ))}
           </dl>
-          <p className="mt-8 text-ink/50 text-sm">{t("shortcuts.note")}</p>
+          <p className="mt-8 text-ink-2 text-sm">{t("shortcuts.note")}</p>
         </div>
       </section>
 
-      <footer className="border-line border-t px-6 py-10 text-center text-ink/60 text-sm">
+      <section className="bg-ink px-6 py-16 text-deck">
+        <div className="mx-auto flex max-w-5xl flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
+          <p className="max-w-md text-balance font-bold text-2xl leading-snug">
+            {t("hero.title")}
+          </p>
+          <a
+            className="cap shrink-0 px-7 py-3.5 font-bold text-ink"
+            href={DOWNLOAD}
+          >
+            {t("hero.download")}
+          </a>
+        </div>
+      </section>
+
+      <footer className="px-6 py-8 text-center text-ink-2 text-sm">
         <a className="underline" href={REPO}>
           {t("footer.source")}
         </a>
