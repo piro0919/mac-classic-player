@@ -1,5 +1,6 @@
 "use client";
 import Image from "next/image";
+import Link from "next/link";
 import styles from "./page.module.css";
 import { Download, Github } from "lucide-react";
 import { motion } from "framer-motion";
@@ -191,6 +192,9 @@ export default function Home() {
       </section>
       <footer className={styles.footer}>
         <span>Free & Open Source — Made for macOS</span>
+        <span>
+          <Link href="/privacy">Privacy</Link>
+        </span>
         <span>
           &copy; 2025{" "}
           <a href="https://kkweb.io/" target="_blank" rel="noopener noreferrer">
