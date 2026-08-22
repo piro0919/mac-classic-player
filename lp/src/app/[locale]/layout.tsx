@@ -1,6 +1,6 @@
 import { Analytics } from "@vercel/analytics/next";
 import type { Metadata } from "next";
-import { Geist } from "next/font/google";
+import { Geist, IBM_Plex_Sans_JP } from "next/font/google";
 import { notFound } from "next/navigation";
 import { hasLocale, NextIntlClientProvider } from "next-intl";
 import { getTranslations, setRequestLocale } from "next-intl/server";
@@ -12,6 +12,17 @@ const sans = Geist({
   display: "swap",
   subsets: ["latin"],
   variable: "--font-sans",
+});
+
+/* 見出しの書体。機械の刻印に近い、字幅の揃った日本語ゴシックを当てる。
+   日本語は unicode-range で百件以上に割れるので preload は切る。
+   切らないと使わない範囲まで先読みして 1ページで 1.5MB 取りに行く */
+const display = IBM_Plex_Sans_JP({
+  display: "swap",
+  preload: false,
+  subsets: ["latin"],
+  variable: "--font-display",
+  weight: ["500", "700"],
 });
 
 type LayoutProps = {
@@ -68,7 +79,7 @@ export default async function Layout({ children, params }: LayoutProps) {
   setRequestLocale(locale);
 
   return (
-    <html className={sans.variable} lang={locale}>
+    <html className={`${sans.variable} ${display.variable}`} lang={locale}>
       <body className="font-[family-name:var(--font-sans)] antialiased">
         <NextIntlClientProvider>{children}</NextIntlClientProvider>
         <Analytics />

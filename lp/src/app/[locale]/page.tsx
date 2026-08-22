@@ -42,7 +42,7 @@ export default async function Page({ params }: PageProps) {
       {/* 見出しに窓を重ねる。文章より先に、押すものと映るものを見せる */}
       <section className="overflow-hidden px-6 pt-8 pb-16">
         <div className="mx-auto max-w-5xl">
-          <h1 className="max-w-3xl text-balance font-bold text-4xl leading-[1.15] tracking-tight sm:text-6xl">
+          <h1 className="max-w-3xl text-balance font-display font-bold text-4xl leading-[1.15] tracking-tight sm:text-6xl">
             {t("hero.title")}
           </h1>
 
@@ -100,7 +100,7 @@ export default async function Page({ params }: PageProps) {
               <span className="font-mono text-signal text-xs">
                 {String(i + 1).padStart(2, "0")}
               </span>
-              <h2 className="mt-3 font-bold text-xl">{item.title}</h2>
+              <h2 className="mt-3 font-display font-bold text-xl">{item.title}</h2>
               <p className="mt-3 text-ink-2 leading-relaxed">{item.body}</p>
             </div>
           ))}
@@ -110,7 +110,7 @@ export default async function Page({ params }: PageProps) {
       {/* このアプリの芯はキー操作なので、キートップそのものを並べる */}
       <section className="border-line border-t px-6 py-16">
         <div className="mx-auto max-w-5xl">
-          <h2 className="font-bold text-xl">{t("shortcuts.title")}</h2>
+          <h2 className="font-display font-bold text-xl">{t("shortcuts.title")}</h2>
           <dl className="mt-8 grid gap-x-12 gap-y-3 sm:grid-cols-2">
             {keys.map((one) => (
               <div
@@ -130,7 +130,7 @@ export default async function Page({ params }: PageProps) {
 
       <section className="bg-ink px-6 py-16 text-deck">
         <div className="mx-auto flex max-w-5xl flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
-          <p className="max-w-md text-balance font-bold text-2xl leading-snug">
+          <p className="max-w-md text-balance font-display font-bold text-2xl leading-snug">
             {t("hero.title")}
           </p>
           <a

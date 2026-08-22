@@ -11,6 +11,7 @@
   --color-slate: #17222c;
   --color-abyss: #0a1017;
   --color-line: #cbc7bf;
+  --font-display: var(--font-display);
 }
 
 html {
