@@ -52,7 +52,15 @@ export async function generateMetadata({
       ),
     },
     description: t("description"),
-    icons: { icon: "/icon.png" },
+    icons: {
+      // 16/32 は絵柄を寄せた別ファイルにしている。宣言しないと 512 の
+      // アプリアイコンが縮小されて、小さいときに何の絵か分からなくなる
+      icon: [
+        { url: "/favicon-16x16.png", sizes: "16x16", type: "image/png" },
+        { url: "/favicon-32x32.png", sizes: "32x32", type: "image/png" },
+        { url: "/icon.png", sizes: "512x512", type: "image/png" },
+      ],
+    },
     metadataBase: new URL("https://mcp.kkweb.io"),
     openGraph: {
       description: t("description"),
