@@ -1,0 +1,122 @@
+{
+  "meta": {
+    "title": "Mac Classic Player — a keyboard-driven media player for macOS",
+    "description": "A minimal video and audio player for macOS with Media Player Classic key bindings. Free, open source, and built for Apple Silicon."
+  },
+  "hero": {
+    "title": "A media player for macOS that answers to the keyboard",
+    "tagline": "Drop a file in and it plays. Every control has a key, and the window keeps the size and volume you left it at.",
+    "download": "Download",
+    "source": "View source",
+    "note": "Free and open source. For Apple Silicon Macs."
+  },
+  "features": {
+    "items": [
+      {
+        "title": "Every control has a key",
+        "body": "Play, stop, seek, volume, mute, fullscreen and the file list are all on the keyboard. Press ? at any time for the full list."
+      },
+      {
+        "title": "Opens straight into playback",
+        "body": "Drag a file onto the window, or press O to pick one. There is no library to import into and no menu to walk through first."
+      },
+      {
+        "title": "Keeps where you left it",
+        "body": "Volume and window size are written down when you quit and restored when you open the app again."
+      },
+      {
+        "title": "Video and audio both",
+        "body": "Plays .mov, .mp4 and .webm, and audio files like .mp3, .m4a and .wav. Press I to see the track's title, artist, album and year."
+      }
+    ]
+  },
+  "shortcuts": {
+    "title": "The keys",
+    "note": "The same list is available inside the app with ?.",
+    "items": [
+      {
+        "key": "Space",
+        "action": "Play / pause"
+      },
+      {
+        "key": "S",
+        "action": "Stop"
+      },
+      {
+        "key": "A / D",
+        "action": "Previous / next file"
+      },
+      {
+        "key": "← / →",
+        "action": "Seek 5 seconds"
+      },
+      {
+        "key": "↑ / ↓",
+        "action": "Volume"
+      },
+      {
+        "key": "M",
+        "action": "Mute"
+      },
+      {
+        "key": "F",
+        "action": "Fullscreen"
+      },
+      {
+        "key": "O",
+        "action": "Open a file"
+      },
+      {
+        "key": "0 – 9",
+        "action": "Jump to 0–90%"
+      },
+      {
+        "key": "I",
+        "action": "Track info"
+      }
+    ]
+  },
+  "screens": {
+    "window": "The Mac Classic Player window, waiting for a file"
+  },
+  "footer": {
+    "source": "View on GitHub",
+    "privacy": "Privacy"
+  },
+  "language": {
+    "en": "EN",
+    "ja": "日本語"
+  },
+  "privacy": {
+    "title": "Privacy Policy",
+    "updated": "Last updated: August 22, 2026",
+    "intro": "Mac Classic Player has no analytics, no crash reporting, no accounts, and no server of mine behind it. There isn't much to tell — but “we don't collect anything” would be sloppy, because the app does talk to two places. Here is all of it.",
+    "sections": [
+      {
+        "title": "Your files stay on your Mac",
+        "body": "Whatever you open is read from disk and played locally. Large files are served through a small HTTP server the app runs on your own machine, bound to 127.0.0.1 so nothing outside your Mac can reach it. No file, filename, or path is ever uploaded."
+      },
+      {
+        "title": "Cover artwork is looked up at Apple",
+        "body": "When an audio file carries artist or album tags, the app sends those two pieces of text to Apple's public iTunes Search API to find cover art, along with a country code taken from your system language. Nothing else goes with it — not the filename, not the path, not any identifier for you or your Mac. This happens automatically and there is currently no switch to turn it off. The request only fires for files that actually have artist or album tags, and video files without those tags never trigger it. Apple's handling of the request is covered by their own privacy policy."
+      },
+      {
+        "title": "Update checks go to GitHub",
+        "body": "The app checks for new versions by fetching a small file from its GitHub Releases page. GitHub sees the request the way it sees any download, including your IP address, and that is covered by GitHub's privacy policy. Nothing about your library is included."
+      },
+      {
+        "title": "What is stored on your Mac",
+        "body": "The list of recently opened files and the window position are written to a folder inside your own Library directory. They never leave the machine, and deleting the app's support folder clears them."
+      },
+      {
+        "title": "You can check all of this",
+        "body": "The app is open source under the MIT license, so none of the above has to be taken on trust. Read the source or open an issue there if something looks wrong."
+      },
+      {
+        "title": "Changes",
+        "body": "If the app ever starts doing something new with data, this page gets updated before that version ships."
+      }
+    ],
+    "back": "Back to Mac Classic Player"
+  }
+}

@@ -1,0 +1,25 @@
+@import "tailwindcss";
+
+@theme {
+  /* アイコンの配色をそのまま持ってくる。濃い青灰に、棒グラフの青緑 */
+  --color-slate: #17222c;
+  --color-abyss: #0a1017;
+  --color-signal: #2e9b9b;
+  --color-ink: #14181d;
+  --color-paper: #f3f4f5;
+  --color-line: #e0e2e5;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--color-paper);
+  color: var(--color-ink);
+}
+
+/* 見出しの帯。アプリのウィンドウと同じ暗さに合わせる */
+.brand {
+  background: linear-gradient(160deg, var(--color-slate) 0%, var(--color-abyss) 100%);
+}

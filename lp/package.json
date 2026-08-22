@@ -1,20 +1,20 @@
 {
   "dependencies": {
     "@vercel/analytics": "^2.0.1",
-    "lucide-react": "0.577.0",
-    "motion": "12.43.0",
     "next": "16.3.2",
+    "next-intl": "^4.12.0",
     "react": "^19.2.8",
-    "react-dom": "^19.2.8",
-    "ress": "5.0.2"
+    "react-dom": "^19.2.8"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.6",
+    "@tailwindcss/postcss": "^4.3.0",
     "@types/node": "^24.13.3",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.4",
     "eslint": "^9.39.5",
     "eslint-config-next": "16.3.1",
+    "tailwindcss": "^4.3.0",
     "typescript": "^6.0.3"
   },
   "name": "mac-classic-player-lp",
@@ -23,7 +23,8 @@
     "build": "next build",
     "dev": "next dev --turbopack",
     "lint": "next lint",
-    "start": "next start"
+    "start": "next start",
+    "typecheck": "tsc --noEmit"
   },
   "version": "0.1.0"
 }
