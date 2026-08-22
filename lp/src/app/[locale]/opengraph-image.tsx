@@ -1,17 +1,17 @@
+import { readFile } from "node:fs/promises";
+import { join } from "node:path";
 import { ImageResponse } from "next/og";
 
 export const alt = "Mac Classic Player";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
-const DECK = "#e7e5e0";
-const CAP = "#f6f5f2";
-const LINE = "#cbc7bf";
-const INK = "#14181d";
-const INK_2 = "#5b6167";
-const SIGNAL = "#1f7d7d";
-
-const KEYS = ["Space", "←", "→", "F", "O", "M"];
+/* 実際に出るのは kk-web の一覧で176px、X のカードで500px 前後。
+   その大きさで残るのはアイコンと名前と1行だけなので、それしか置かない。
+   地はアプリのアイコンと同じ濃紺 */
+const DEEP = "#0d161e";
+const PAPER = "#f2f4f5";
+const SIGNAL = "#3fb6b6";
 
 export default async function OgImage({
   params,
@@ -20,68 +20,43 @@ export default async function OgImage({
 }): Promise<ImageResponse> {
   const { locale } = await params;
   const isJa = locale === "ja";
+  const icon = await readFile(join(process.cwd(), "public/icon.png"));
+  const iconSrc = `data:image/png;base64,${icon.toString("base64")}`;
 
   return new ImageResponse(
     <div
       style={{
-        background: DECK,
+        alignItems: "center",
+        background: DEEP,
         display: "flex",
-        flexDirection: "column",
+        gap: 64,
         height: "100%",
-        justifyContent: "center",
-        padding: "0 80px",
+        padding: "0 90px",
         width: "100%",
       }}
     >
-      <div style={{ color: SIGNAL, fontSize: 20, letterSpacing: 6 }}>
-        MAC CLASSIC PLAYER
-      </div>
-      <div
-        style={{
-          color: INK,
-          display: "flex",
-          flexDirection: "column",
-          fontSize: 66,
-          fontWeight: 700,
-          lineHeight: 1.22,
-          marginTop: 26,
-        }}
-      >
-        {(isJa
-          ? ["キーボードで動かす、", "macOS のプレイヤーです"]
-          : ["A macOS player", "you drive from the keyboard"]
-        ).map((line) => (
-          <div key={line}>{line}</div>
-        ))}
-      </div>
-
-      <div style={{ display: "flex", gap: 14, marginTop: 46 }}>
-        {KEYS.map((key) => (
-          <div
-            key={key}
-            style={{
-              alignItems: "center",
-              background: CAP,
-              border: `2px solid ${LINE}`,
-              borderBottom: `8px solid ${LINE}`,
-              borderRadius: 10,
-              color: INK,
-              display: "flex",
-              fontSize: 32,
-              justifyContent: "center",
-              minWidth: 104,
-              padding: "18px 22px",
-            }}
-          >
-            {key}
-          </div>
-        ))}
-      </div>
-
-      <div style={{ color: INK_2, fontSize: 22, marginTop: 40 }}>
-        {isJa
-          ? "無料・オープンソース。Apple Silicon の Mac 向け。"
-          : "Free and open source. For Apple Silicon Macs."}
+      {/* biome-ignore lint/performance/noImgElement: next/image is not available in ImageResponse */}
+      <img alt="" height={300} src={iconSrc} width={300} />
+      <div style={{ display: "flex", flexDirection: "column" }}>
+        <div
+          style={{
+            color: PAPER,
+            display: "flex",
+            flexDirection: "column",
+            fontSize: 92,
+            fontWeight: 700,
+            letterSpacing: -2,
+            lineHeight: 1.1,
+          }}
+        >
+          <div>Mac Classic</div>
+          <div>Player</div>
+        </div>
+        <div style={{ color: SIGNAL, display: "flex", fontSize: 34, marginTop: 22 }}>
+          {isJa
+            ? "キーボードで動かす、macOS のプレイヤー"
+            : "A macOS player you drive from the keyboard"}
+        </div>
       </div>
     </div>,
     { ...size },
