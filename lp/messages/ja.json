@@ -1,11 +1,11 @@
 {
   "meta": {
-    "title": "Mac Classic Player — キーボードで動かす macOS のプレイヤー",
-    "description": "Media Player Classic のキー操作をそのまま持ってきた、macOS 用のミニマルな動画・音声プレイヤーです。無料・オープンソース、Apple Silicon の Mac 向けです。"
+    "title": "Mac Classic Player — macOS のための軽いメディアプレイヤー",
+    "description": "Media Player Classic の操作をそのまま持ってきた、macOS 用のミニマルな動画・音声プレイヤーです。無料・オープンソース、Apple Silicon の Mac 向けです。"
   },
   "hero": {
-    "title": "キーボードで動かす、macOS のプレイヤーです",
-    "tagline": "ファイルを渡せば再生します。操作にはすべてキーが割り当ててあり、ウィンドウの大きさと音量は閉じたときのまま次も開きます。",
+    "title": "macOS のための、軽いメディアプレイヤーです",
+    "tagline": "ファイルを渡せば再生します。Media Player Classic の操作をそのまま持ってきていて、ウィンドウの大きさと音量は閉じたときのまま次も開きます。",
     "download": "ダウンロード",
     "source": "ソースを見る",
     "note": "無料・オープンソースです。Apple Silicon の Mac 向けです。"
@@ -77,7 +77,7 @@
     ]
   },
   "screens": {
-    "window": "ファイルを待っている Mac Classic Player のウィンドウ"
+    "window": "動画を再生している Mac Classic Player のウィンドウ"
   },
   "footer": {
     "source": "GitHub で見る",

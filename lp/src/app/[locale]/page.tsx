@@ -84,7 +84,7 @@ export default async function Page({ params }: PageProps) {
                 height={505}
                 priority={true}
                 quality={100}
-                src="/screenshot-empty.png"
+                src="/screenshot-main.png"
                 width={820}
               />
             </div>

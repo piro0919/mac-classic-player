@@ -13,9 +13,9 @@ export function generateStaticParams(): { locale: string }[] {
   return routing.locales.map((locale) => ({ locale }));
 }
 
-/* 実際に出るのは kk-web の一覧で176px、X のカードで500px 前後。
-   その大きさで残るのはアイコンと名前と1行だけなので、それしか置かない。
-   地はアプリのアイコンと同じ濃紺 */
+/* 実在のアプリ（Linear / Arc / CleanShot / Setapp）の作りに合わせる。
+   ブランド色の地に、アイコンと名前と短い一行だけ。説明文は入れない。
+   色はアイコンから取った濃紺と青緑 */
 const DEEP = "#0d161e";
 const PAPER = "#f2f4f5";
 const SIGNAL = "#3fb6b6";
@@ -27,8 +27,6 @@ export default async function OgImage({
 }): Promise<ImageResponse> {
   const { locale } = await params;
   const isJa = locale === "ja";
-  /* 見出しの書体はサイトと同じ IBM Plex Sans JP。使う文字だけに絞ったものを
-     同梱している。文言を変えたら assets/README.md の手順で作り直す */
   const [icon, font] = await Promise.all([
     readFile(join(process.cwd(), "public/icon.png")),
     readFile(join(process.cwd(), "assets/IBMPlexSansJP-Bold-subset.ttf")),
@@ -39,45 +37,31 @@ export default async function OgImage({
     <div
       style={{
         alignItems: "center",
-        flexDirection: "column",
-        justifyContent: "center",
         background: DEEP,
         display: "flex",
-        gap: 28,
+        flexDirection: "column",
         height: "100%",
-        padding: "0 90px",
+        justifyContent: "center",
         width: "100%",
       }}
     >
       {/* biome-ignore lint/performance/noImgElement: next/image is not available in ImageResponse */}
-      <img alt="" height={300} src={iconSrc} width={300} />
+      <img alt="" height={200} src={iconSrc} width={200} />
       <div
         style={{
-          alignItems: "center",
+          color: PAPER,
           display: "flex",
-          flexDirection: "column",
-          textAlign: "center",
+          fontSize: 84,
+          letterSpacing: -2,
+          marginTop: 32,
         }}
       >
-        <div
-          style={{
-            color: PAPER,
-            display: "flex",
-            flexDirection: "column",
-            fontSize: 92,
-            fontWeight: 700,
-            letterSpacing: -2,
-            lineHeight: 1.1,
-          }}
-        >
-          <div>Mac Classic</div>
-          <div>Player</div>
-        </div>
-        <div style={{ color: SIGNAL, display: "flex", fontSize: 34, marginTop: 22 }}>
-          {isJa
-            ? "キーボードで動かす、macOS のプレイヤー"
-            : "A macOS player you drive from the keyboard"}
-        </div>
+        Mac Classic Player
+      </div>
+      <div style={{ color: SIGNAL, display: "flex", fontSize: 32, marginTop: 18 }}>
+        {isJa
+          ? "macOS のための軽いメディアプレイヤー"
+          : "A lightweight media player for macOS"}
       </div>
     </div>,
     {

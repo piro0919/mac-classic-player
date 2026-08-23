@@ -1,11 +1,11 @@
 {
   "meta": {
-    "title": "Mac Classic Player — a keyboard-driven media player for macOS",
-    "description": "A minimal video and audio player for macOS with Media Player Classic key bindings. Free, open source, and built for Apple Silicon."
+    "title": "Mac Classic Player — a lightweight media player for macOS",
+    "description": "A minimal video and audio player for macOS, with the controls of Media Player Classic. Free, open source, and built for Apple Silicon."
   },
   "hero": {
-    "title": "A media player for macOS that answers to the keyboard",
-    "tagline": "Drop a file in and it plays. Every control has a key, and the window keeps the size and volume you left it at.",
+    "title": "A lightweight media player for macOS",
+    "tagline": "Hand it a file and it plays. The controls come straight from Media Player Classic, and the window size and volume come back as you left them.",
     "download": "Download",
     "source": "View source",
     "note": "Free and open source. For Apple Silicon Macs."
@@ -77,7 +77,7 @@
     ]
   },
   "screens": {
-    "window": "The Mac Classic Player window, waiting for a file"
+    "window": "The Mac Classic Player window playing a video"
   },
   "footer": {
     "source": "View on GitHub",
