@@ -27,16 +27,23 @@ export default async function OgImage({
 }): Promise<ImageResponse> {
   const { locale } = await params;
   const isJa = locale === "ja";
-  const icon = await readFile(join(process.cwd(), "public/icon.png"));
+  /* 見出しの書体はサイトと同じ IBM Plex Sans JP。使う文字だけに絞ったものを
+     同梱している。文言を変えたら assets/README.md の手順で作り直す */
+  const [icon, font] = await Promise.all([
+    readFile(join(process.cwd(), "public/icon.png")),
+    readFile(join(process.cwd(), "assets/IBMPlexSansJP-Bold-subset.ttf")),
+  ]);
   const iconSrc = `data:image/png;base64,${icon.toString("base64")}`;
 
   return new ImageResponse(
     <div
       style={{
         alignItems: "center",
+        flexDirection: "column",
+        justifyContent: "center",
         background: DEEP,
         display: "flex",
-        gap: 64,
+        gap: 28,
         height: "100%",
         padding: "0 90px",
         width: "100%",
@@ -44,7 +51,14 @@ export default async function OgImage({
     >
       {/* biome-ignore lint/performance/noImgElement: next/image is not available in ImageResponse */}
       <img alt="" height={300} src={iconSrc} width={300} />
-      <div style={{ display: "flex", flexDirection: "column" }}>
+      <div
+        style={{
+          alignItems: "center",
+          display: "flex",
+          flexDirection: "column",
+          textAlign: "center",
+        }}
+      >
         <div
           style={{
             color: PAPER,
@@ -66,6 +80,11 @@ export default async function OgImage({
         </div>
       </div>
     </div>,
-    { ...size },
+    {
+      ...size,
+      fonts: [
+        { data: font, name: "IBM Plex Sans JP", style: "normal", weight: 700 },
+      ],
+    },
   );
 }
