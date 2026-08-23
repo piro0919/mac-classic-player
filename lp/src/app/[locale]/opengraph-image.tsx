@@ -13,8 +13,8 @@ export function generateStaticParams(): { locale: string }[] {
   return routing.locales.map((locale) => ({ locale }));
 }
 
-/* 実在のアプリ（Linear / Arc / CleanShot / Setapp）の作りに合わせる。
-   ブランド色の地に、アイコンと名前と短い一行だけ。説明文は入れない。
+/* 実在のアプリに合わせる。Linear と Setapp はアイコンと名前を横に並べ、
+   Arc と CleanShot はアイコンだけ。縦に積んでいるものは無かった。
    色はアイコンから取った濃紺と青緑 */
 const DEEP = "#0d161e";
 const PAPER = "#f2f4f5";
@@ -39,29 +39,33 @@ export default async function OgImage({
         alignItems: "center",
         background: DEEP,
         display: "flex",
-        flexDirection: "column",
+        gap: 56,
         height: "100%",
         justifyContent: "center",
         width: "100%",
       }}
     >
       {/* biome-ignore lint/performance/noImgElement: next/image is not available in ImageResponse */}
-      <img alt="" height={200} src={iconSrc} width={200} />
-      <div
-        style={{
-          color: PAPER,
-          display: "flex",
-          fontSize: 84,
-          letterSpacing: -2,
-          marginTop: 32,
-        }}
-      >
-        Mac Classic Player
-      </div>
-      <div style={{ color: SIGNAL, display: "flex", fontSize: 32, marginTop: 18 }}>
-        {isJa
-          ? "macOS のための軽いメディアプレイヤー"
-          : "A lightweight media player for macOS"}
+      <img alt="" height={230} src={iconSrc} width={230} />
+      <div style={{ display: "flex", flexDirection: "column" }}>
+        <div
+          style={{
+            color: PAPER,
+            display: "flex",
+            flexDirection: "column",
+            fontSize: 76,
+            letterSpacing: -2,
+            lineHeight: 1.12,
+          }}
+        >
+          <div>Mac Classic</div>
+          <div>Player</div>
+        </div>
+        <div style={{ color: SIGNAL, display: "flex", fontSize: 30, marginTop: 18 }}>
+          {isJa
+            ? "macOS のための軽いメディアプレイヤー"
+            : "A lightweight media player for macOS"}
+        </div>
       </div>
     </div>,
     {
