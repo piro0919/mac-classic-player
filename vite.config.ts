@@ -16,7 +16,10 @@ export default defineConfig({
     // Tauri環境に合わせたビルドターゲット
     target:
       process.env.TAURI_ENV_PLATFORM === "windows" ? "chrome105" : "safari13",
-    minify: !process.env.TAURI_ENV_DEBUG ? "esbuild" : false,
+    // Vite 8 (rolldown) no longer bundles esbuild, so naming it here forces
+    // a separate install. "oxc" is rolldown's built-in minifier and needs
+    // no extra dependency.
+    minify: !process.env.TAURI_ENV_DEBUG ? "oxc" : false,
     sourcemap: !!process.env.TAURI_ENV_DEBUG,
   },
   plugins: [react()],
