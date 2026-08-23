@@ -39,27 +39,25 @@ export default async function OgImage({
         alignItems: "center",
         background: DEEP,
         display: "flex",
-        gap: 56,
+        gap: 44,
         height: "100%",
         justifyContent: "center",
         width: "100%",
       }}
     >
       {/* biome-ignore lint/performance/noImgElement: next/image is not available in ImageResponse */}
-      <img alt="" height={230} src={iconSrc} width={230} />
+      <img alt="" height={190} src={iconSrc} width={190} />
       <div style={{ display: "flex", flexDirection: "column" }}>
         <div
           style={{
             color: PAPER,
             display: "flex",
-            flexDirection: "column",
-            fontSize: 76,
-            letterSpacing: -2,
-            lineHeight: 1.12,
+            fontSize: 64,
+            letterSpacing: -1.5,
+            whiteSpace: "nowrap",
           }}
         >
-          <div>Mac Classic</div>
-          <div>Player</div>
+          Mac Classic Player
         </div>
         <div style={{ color: SIGNAL, display: "flex", fontSize: 30, marginTop: 18 }}>
           {isJa
