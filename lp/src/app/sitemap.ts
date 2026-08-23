@@ -19,9 +19,13 @@ export default function sitemap(): MetadataRoute.Sitemap {
   return pages.flatMap((page) =>
     routing.locales.map((locale) => ({
       alternates: {
-        languages: Object.fromEntries(
-          routing.locales.map((one) => [one, href(one, page.path)]),
-        ),
+        languages: {
+          ...Object.fromEntries(
+            routing.locales.map((one) => [one, href(one, page.path)]),
+          ),
+          // 言語を選べない利用者にどれを見せるかを決めておく
+          "x-default": href(routing.defaultLocale, page.path),
+        },
       },
       changeFrequency: page.changeFrequency,
       lastModified: new Date(),

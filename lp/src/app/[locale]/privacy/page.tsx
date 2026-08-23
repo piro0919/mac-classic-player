@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
-import { routing } from "@/i18n/routing";
+import { languageAlternates, localePath } from "@/i18n/urls";
 
 type Section = { title: string; body: string };
 
@@ -14,9 +14,11 @@ export async function generateMetadata({
   const t = await getTranslations({ locale, namespace: "privacy" });
 
   return {
+    // 親の alternates ごと差し替わるので、hreflang もここで出し直す。
+    // 書かないと /privacy から言語間の相互参照が消える
     alternates: {
-      canonical:
-        locale === routing.defaultLocale ? "/privacy" : `/${locale}/privacy`,
+      canonical: localePath(locale, "/privacy"),
+      languages: languageAlternates("/privacy"),
     },
     description: t("intro"),
     title: t("title"),

@@ -6,6 +6,12 @@ import { hasLocale, NextIntlClientProvider } from "next-intl";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import type { ReactNode } from "react";
 import { routing } from "@/i18n/routing";
+import {
+  languageAlternates,
+  localePath,
+  ogAlternateLocales,
+  ogLocale,
+} from "@/i18n/urls";
 import "./globals.css";
 
 const sans = Geist({
@@ -39,17 +45,12 @@ export async function generateMetadata({
 }: Omit<LayoutProps, "children">): Promise<Metadata> {
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: "meta" });
-  const path = locale === routing.defaultLocale ? "/" : `/${locale}`;
+  const path = localePath(locale);
 
   return {
     alternates: {
       canonical: path,
-      languages: Object.fromEntries(
-        routing.locales.map((one) => [
-          one,
-          one === routing.defaultLocale ? "/" : `/${one}`,
-        ]),
-      ),
+      languages: languageAlternates(),
     },
     description: t("description"),
     icons: {
@@ -63,6 +64,8 @@ export async function generateMetadata({
     },
     metadataBase: new URL("https://mcp.kkweb.io"),
     openGraph: {
+      locale: ogLocale(locale),
+      alternateLocale: ogAlternateLocales(locale),
       description: t("description"),
       siteName: "Mac Classic Player",
       title: t("title"),
