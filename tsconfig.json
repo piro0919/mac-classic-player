@@ -1,13 +1,12 @@
 {
   "compilerOptions": {
-    "baseUrl": "./",
     "esModuleInterop": true,
     "jsx": "react-jsx",
     "module": "nodenext",
     "moduleResolution": "nodenext",
     "paths": {
       "@/*": [
-        "renderer/*"
+        "./renderer/*"
       ]
     },
     "skipLibCheck": true,
