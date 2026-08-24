@@ -12,6 +12,18 @@ use tauri::{
 use tauri_plugin_fs::FsExt;
 use tauri_plugin_updater::UpdaterExt;
 
+/// ポイズンしたMutexからも値を取り戻してロックする
+///
+/// ポイズン＝以前の保持者が更新中にpanicしたということ。ここで守っているのは
+/// 開いたファイルのパスと最近使ったファイルの一覧だけなので、もう一度panicして
+/// プレイヤーごと落とすより、記録を残して復旧した値で続けるほうが実害が小さい。
+fn lock_through_poison<'a, T>(m: &'a Mutex<T>, what: &str) -> std::sync::MutexGuard<'a, T> {
+    m.lock().unwrap_or_else(|poisoned| {
+        eprintln!("[state] {what} のMutexがポイズンしています。復旧した値で続行します");
+        poisoned.into_inner()
+    })
+}
+
 /// 受信したファイルパスをfsプラグインのランタイムscopeに動的追加する
 /// capabilitiesの静的scope（globベース）はdot-prefixedディレクトリ
 /// （例: `/Volumes/HIKSEMI/.CloudStorage/...`）を含むパスにマッチしないため、
@@ -43,6 +55,19 @@ struct RecentFilesData {
     paths: Vec<String>,
 }
 
+/// 最近使ったファイルの一覧に新しいパスを取り込む
+///
+/// 既にある同じパスは取り除いてから先頭に入れ直すので、開き直したものが常に
+/// 一番上に来る。`new_paths` を逆順に回すのは、まとめて渡された並びをそのまま
+/// 先頭に再現するため。最後に `MAX_RECENT_FILES` で打ち切る。
+fn merge_recent(paths: &mut Vec<String>, new_paths: &[String]) {
+    for path in new_paths.iter().rev() {
+        paths.retain(|p| p != path);
+        paths.insert(0, path.clone());
+    }
+    paths.truncate(MAX_RECENT_FILES);
+}
+
 /// 最近使ったファイルの状態管理
 struct RecentFiles {
     data: Mutex<RecentFilesData>,
@@ -67,25 +92,23 @@ impl RecentFiles {
 
     /// パスを追加（重複は先頭に移動、最大件数でtruncate）
     fn add_paths(&self, new_paths: &[String]) {
-        let mut data = self.data.lock().unwrap();
-        for path in new_paths.iter().rev() {
-            data.paths.retain(|p| p != path);
-            data.paths.insert(0, path.clone());
-        }
-        data.paths.truncate(MAX_RECENT_FILES);
+        let mut data = lock_through_poison(&self.data, "recent_files");
+        merge_recent(&mut data.paths, new_paths);
         self.save_to_disk(&data);
     }
 
     /// 履歴をクリアする
     fn clear(&self) {
-        let mut data = self.data.lock().unwrap();
+        let mut data = lock_through_poison(&self.data, "recent_files");
         data.paths.clear();
         self.save_to_disk(&data);
     }
 
     /// 現在のパスリストを取得
     fn get_paths(&self) -> Vec<String> {
-        self.data.lock().unwrap().paths.clone()
+        lock_through_poison(&self.data, "recent_files")
+            .paths
+            .clone()
     }
 
     /// JSONファイルに保存
@@ -106,7 +129,7 @@ impl RecentFiles {
 /// フロントエンドの準備完了時に、保留中のファイルパスを取得する
 #[tauri::command]
 fn get_pending_files(state: tauri::State<OpenedFiles>) -> Vec<String> {
-    let mut files = state.0.lock().unwrap();
+    let mut files = lock_through_poison(&state.0, "opened_files");
     let result = files.clone();
     files.clear();
     result
@@ -148,6 +171,53 @@ fn start_stream_server() -> u16 {
     });
 
     port
+}
+
+/// `Range:` ヘッダーの値を、配信するファイルのサイズに突き合わせて解決する
+///
+/// 返すのは送信すべき範囲（両端を含む）。満たせない要求のときは `None` を返し、
+/// 呼び出し側が 416 を返す。ブラウザが実際に送ってくる3つの形に対応する。
+///
+/// - `bytes=START-END` — END がファイル末尾を超えていれば末尾に丸める
+/// - `bytes=START-` — START から末尾まで
+/// - `bytes=-N` — 末尾 N バイト
+///
+/// 空のファイル、末尾を越えた START、START より小さい END は満たせないので
+/// `None`。ここを素通しにすると `end - start + 1` や `file_size - 1` が u64 の
+/// 引き算で破綻する。
+fn resolve_range(range_str: &str, file_size: u64) -> Option<(u64, u64)> {
+    if file_size == 0 {
+        return None;
+    }
+    let last = file_size - 1;
+    let spec = range_str.trim().strip_prefix("bytes=")?;
+    // 複数範囲の要求は先頭の1つだけを配信する
+    let spec = spec.split(',').next()?.trim();
+    let (start_str, end_str) = spec.split_once('-')?;
+    let (start_str, end_str) = (start_str.trim(), end_str.trim());
+
+    // 末尾から数える形
+    if start_str.is_empty() {
+        let n: u64 = end_str.parse().ok()?;
+        if n == 0 {
+            return None;
+        }
+        return Some((file_size.saturating_sub(n), last));
+    }
+
+    let start: u64 = start_str.parse().ok()?;
+    if start > last {
+        return None;
+    }
+    let end = if end_str.is_empty() {
+        last
+    } else {
+        end_str.parse::<u64>().ok()?.min(last)
+    };
+    if end < start {
+        return None;
+    }
+    Some((start, end))
 }
 
 /// HTTP接続を処理してファイルをストリーミング配信する
@@ -203,13 +273,18 @@ fn handle_stream_connection(mut stream: std::net::TcpStream) {
 
     if let Some(range_str) = range_header {
         // Range requestの処理 (例: bytes=0-1048575)
-        let range = range_str.strip_prefix("bytes=").unwrap_or("");
-        let range_parts: Vec<&str> = range.splitn(2, '-').collect();
-        let start: u64 = range_parts[0].parse().unwrap_or(0);
-        let end: u64 = if range_parts.len() > 1 && !range_parts[1].is_empty() {
-            range_parts[1].parse().unwrap_or(file_size - 1)
-        } else {
-            file_size - 1
+        let Some((start, end)) = resolve_range(&range_str, file_size) else {
+            let _ = stream.write_all(
+                format!(
+                    "HTTP/1.1 416 Range Not Satisfiable\r\n\
+                     Content-Range: bytes */{file_size}\r\n\
+                     Content-Length: 0\r\n\
+                     Access-Control-Allow-Origin: *\r\n\
+                     \r\n"
+                )
+                .as_bytes(),
+            );
+            return;
         };
         let length = end - start + 1;
 
@@ -718,10 +793,136 @@ pub fn run() {
             } else {
                 // ウィンドウがまだ準備できていない場合、保留リストに追加
                 if let Some(state) = app_handle.try_state::<OpenedFiles>() {
-                    let mut files = state.0.lock().unwrap();
+                    let mut files = lock_through_poison(&state.0, "opened_files");
                     files.extend(paths);
                 }
             }
         }
     });
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // --- Range ヘッダーの解決 ---
+
+    #[test]
+    fn a_plain_range_passes_through() {
+        assert_eq!(resolve_range("bytes=0-1023", 4096), Some((0, 1023)));
+        assert_eq!(resolve_range("bytes=1024-2047", 4096), Some((1024, 2047)));
+    }
+
+    #[test]
+    fn an_open_ended_range_runs_to_the_last_byte() {
+        assert_eq!(resolve_range("bytes=1000-", 4096), Some((1000, 4095)));
+    }
+
+    #[test]
+    fn an_end_past_eof_is_clamped() {
+        // シーク中のプレイヤーが大きめの終端を投げてくることがある。
+        // 丸めないとContent-Lengthと実データが食い違う。
+        assert_eq!(resolve_range("bytes=0-999999", 4096), Some((0, 4095)));
+    }
+
+    #[test]
+    fn a_suffix_range_counts_back_from_the_end() {
+        assert_eq!(resolve_range("bytes=-500", 4096), Some((3596, 4095)));
+    }
+
+    #[test]
+    fn a_suffix_larger_than_the_file_covers_all_of_it() {
+        assert_eq!(resolve_range("bytes=-99999", 4096), Some((0, 4095)));
+    }
+
+    #[test]
+    fn an_empty_file_satisfies_no_range() {
+        // ここを素通しにすると file_size - 1 が u64 で破綻する
+        assert_eq!(resolve_range("bytes=0-", 0), None);
+        assert_eq!(resolve_range("bytes=0-100", 0), None);
+    }
+
+    #[test]
+    fn a_start_past_eof_is_unsatisfiable() {
+        assert_eq!(resolve_range("bytes=4096-5000", 4096), None);
+    }
+
+    #[test]
+    fn an_end_below_the_start_is_unsatisfiable() {
+        // ここを素通しにすると end - start + 1 が u64 で破綻する
+        assert_eq!(resolve_range("bytes=100-50", 4096), None);
+    }
+
+    #[test]
+    fn malformed_headers_are_rejected() {
+        for spec in [
+            "",
+            "bytes=",
+            "items=0-10",
+            "bytes=abc-def",
+            "bytes=0",
+            "bytes=-0",
+        ] {
+            assert_eq!(resolve_range(spec, 4096), None, "{spec} は拒否されるべき");
+        }
+    }
+
+    #[test]
+    fn only_the_first_of_a_multi_range_request_is_served() {
+        assert_eq!(resolve_range("bytes=0-99, 200-299", 4096), Some((0, 99)));
+    }
+
+    #[test]
+    fn surrounding_whitespace_is_ignored() {
+        assert_eq!(resolve_range("  bytes= 10 - 20 ", 4096), Some((10, 20)));
+    }
+
+    #[test]
+    fn a_one_byte_file_can_be_requested_whole() {
+        assert_eq!(resolve_range("bytes=0-0", 1), Some((0, 0)));
+    }
+
+    // --- 最近使ったファイル ---
+
+    fn v(items: &[&str]) -> Vec<String> {
+        items.iter().map(|s| s.to_string()).collect()
+    }
+
+    #[test]
+    fn a_newly_opened_file_goes_to_the_front() {
+        let mut paths = v(&["a.mp4"]);
+        merge_recent(&mut paths, &v(&["b.mp4"]));
+        assert_eq!(paths, v(&["b.mp4", "a.mp4"]));
+    }
+
+    #[test]
+    fn reopening_a_file_moves_it_up_without_duplicating() {
+        let mut paths = v(&["a.mp4", "b.mp4", "c.mp4"]);
+        merge_recent(&mut paths, &v(&["c.mp4"]));
+        assert_eq!(paths, v(&["c.mp4", "a.mp4", "b.mp4"]));
+    }
+
+    #[test]
+    fn a_batch_keeps_its_order_at_the_front() {
+        let mut paths = v(&["old.mp4"]);
+        merge_recent(&mut paths, &v(&["1.mp4", "2.mp4", "3.mp4"]));
+        assert_eq!(paths, v(&["1.mp4", "2.mp4", "3.mp4", "old.mp4"]));
+    }
+
+    #[test]
+    fn the_oldest_entry_falls_off_at_the_cap() {
+        let mut paths: Vec<String> = (0..MAX_RECENT_FILES).map(|i| format!("{i}.mp4")).collect();
+        merge_recent(&mut paths, &v(&["new.mp4"]));
+        assert_eq!(paths.len(), MAX_RECENT_FILES);
+        assert_eq!(paths[0], "new.mp4");
+        let last = format!("{}.mp4", MAX_RECENT_FILES - 1);
+        assert!(!paths.contains(&last), "一番古いものが残っている");
+    }
+
+    #[test]
+    fn an_empty_batch_leaves_the_list_alone() {
+        let mut paths = v(&["a.mp4", "b.mp4"]);
+        merge_recent(&mut paths, &[]);
+        assert_eq!(paths, v(&["a.mp4", "b.mp4"]));
+    }
 }
