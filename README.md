@@ -69,6 +69,18 @@ npm run dev
 
 ---
 
+## ⚙️ Development
+
+Tauri builds the native side, so a Rust toolchain is needed alongside Node.
+
+```bash
+npm install
+npm run dev     # tauri dev
+npm run build   # tauri build
+```
+
+The landing page under `lp/` runs separately with `npm run dev:lp`.
+
 ## 📝 License
 
 MIT — Feel free to fork and extend!
