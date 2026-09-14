@@ -1,7 +1,7 @@
 {
   "meta": {
-    "title": "Mac Classic Player — a lightweight media player for macOS",
-    "description": "A minimal video and audio player for macOS, with the controls of Media Player Classic. Free, open source, and built for Apple Silicon."
+    "title": "Mac Classic Player — a Media Player Classic alternative for macOS",
+    "description": "Media Player Classic has no macOS build. Mac Classic Player brings its keyboard controls to the Mac — free, open source, and built for Apple Silicon."
   },
   "hero": {
     "title": "A lightweight media player for macOS",
