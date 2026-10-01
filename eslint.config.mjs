@@ -24,6 +24,16 @@ const compat = new FlatCompat({
   recommendedConfig: js.configs.recommended,
 });
 const eslintConfig = [
+  // ビルド成果物・LP（別パッケージ）・Rust側・設定ファイルは対象外にする
+  {
+    ignores: [
+      "dist/**",
+      "docs/**",
+      "lp/**",
+      "src-tauri/**",
+      "*.config.{js,mjs,ts}",
+    ],
+  },
   {
     files: ["**/*.{ts,tsx}"],
   },
@@ -73,7 +83,8 @@ const eslintConfig = [
       "@typescript-eslint/no-unused-vars": "error",
       "@typescript-eslint/promise-function-async": "error",
       "@typescript-eslint/strict-boolean-expressions": "off",
-      "css-modules/no-unused-class": [2, { camelCase: true }],
+      // VideoPlayer.module.css を複数コンポーネントで共有しているため、未使用クラス検出は誤検知になる
+      "css-modules/no-unused-class": "off",
       "css-modules/no-undef-class": [2, { camelCase: true }],
       "ext/lines-between-object-properties": ["error", "never"],
       "filenames/match-exported": ["error", ["camel", "kebab", "pascal"]],
@@ -160,11 +171,10 @@ const eslintConfig = [
             "internal",
             ["parent", "sibling"],
             "index",
-            "object",
             "type",
             "unknown",
           ],
-          newlinesBetween: "never",
+          newlinesBetween: 0,
           order: "asc",
           type: "natural",
         },
@@ -179,7 +189,7 @@ const eslintConfig = [
       "perfectionist/sort-jsx-props": [
         "error",
         {
-          groups: ["multiline", "shorthand", "unknown"],
+          groups: ["multiline-prop", "shorthand-prop", "unknown"],
           order: "asc",
           type: "natural",
         },

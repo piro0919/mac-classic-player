@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
-import type { VideoQueueAction } from "../store/videoQueueReducer";
-import type { VideoItem } from "../types/videoTypes";
 import {
   AUDIO_EXTENSIONS,
   parseAudioMetadata,
   parseFileName,
 } from "../utils/mediaFile";
+import type { VideoQueueAction } from "../store/videoQueueReducer";
+import type { VideoItem } from "../types/videoTypes";
 
 // URL.createObjectURLで作成したオブジェクトを追跡
 const createdObjectUrls: string[] = [];
@@ -30,7 +30,6 @@ const createAndTrackObjectURL = (blob: Blob): string => {
 
   return url;
 };
-
 // FileオブジェクトからVideoItemを作成する（音声ファイルはメタデータも解析）
 const fileToVideoItem = async (file: File): Promise<VideoItem> => {
   const { baseName, ext } = parseFileName(file.name);

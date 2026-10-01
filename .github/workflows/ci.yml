@@ -16,7 +16,7 @@ jobs:
           node-version: 24.21.0
           cache: npm
       - run: npm ci
-      # lint は typescript-eslint が TypeScript 7 に未対応で動かないので入れていない。
+      - run: npm run lint
       - run: npm run type-check
       - run: npm run build:frontend
       - uses: dtolnay/rust-toolchain@stable

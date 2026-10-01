@@ -11,15 +11,12 @@ export const useMediaArtwork = (
 ) => {
   useEffect(() => {
     const processedUrls = new Map<string, boolean>();
-
     const fetchArtworkBatch = async () => {
       const BATCH_SIZE = 3;
       // メタデータがあり、アートワークがまだ取得されていないアイテムを抽出
       const pendingItems = videoQueue.filter(
         (item) =>
-          !item.artworkUrl &&
-          item.metadata &&
-          !processedUrls.has(item.url),
+          !item.artworkUrl && item.metadata && !processedUrls.has(item.url),
       );
 
       for (let i = 0; i < pendingItems.length; i += BATCH_SIZE) {
@@ -34,7 +31,6 @@ export const useMediaArtwork = (
         );
       }
     };
-
     const fetchArtwork = async (item: VideoItem, index: number) => {
       processedUrls.set(item.url, true);
 

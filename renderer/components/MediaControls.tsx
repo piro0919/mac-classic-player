@@ -13,6 +13,7 @@ import {
 import React from "react";
 import { type VideoQueueAction } from "../store/videoQueueReducer";
 import styles from "../styles/VideoPlayer.module.css";
+import { type VideoItem } from "../types/videoTypes";
 
 type MediaControlsProps = {
   currentIndex: number;
@@ -27,7 +28,7 @@ type MediaControlsProps = {
   setShowInfo: React.Dispatch<React.SetStateAction<boolean>>;
   setVolume: (value: ((prev: number) => number) | number) => void;
   toggleFullscreen: () => Promise<void>;
-  videoQueue: any[];
+  videoQueue: VideoItem[];
   volume: number;
 };
 
@@ -159,11 +160,9 @@ const MediaControls: React.FC<MediaControlsProps> = ({
       </button>
       {/* フルスクリーンボタン */}
       <button
-        onClick={async () => {
-          await toggleFullscreen();
-        }}
         aria-label={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
         className={styles.controlButton}
+        onClick={() => void toggleFullscreen()}
       >
         {isFullscreen ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
       </button>

@@ -1,4 +1,3 @@
-import { initialState, videoQueueReducer } from "@/store/videoQueueReducer";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 // VideoPlayer.tsx (メインコンポーネント)
 import React, {
@@ -11,12 +10,13 @@ import React, {
 } from "react";
 import ReactPlayer from "react-player";
 import useLocalStorageState from "use-local-storage-state";
+import { initialState, videoQueueReducer } from "@/store/videoQueueReducer";
 import placeholderImage from "../assets/video-placeholder.png";
-import { useTauriEvents } from "../hooks/useTauriEvents";
 import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
 // カスタムフックのインポート
 import { useMediaArtwork } from "../hooks/useMediaArtwork";
 import { cleanupObjectUrls, useMediaFiles } from "../hooks/useMediaFiles";
+import { useTauriEvents } from "../hooks/useTauriEvents";
 import styles from "../styles/VideoPlayer.module.css";
 import AudioPlayer from "./AudioPlayer";
 import HelpOverlay from "./HelpOverlay";
@@ -162,7 +162,7 @@ const VideoPlayer: React.FC = () => {
       <input
         accept="video/*,audio/*"
         multiple={true}
-        onChange={handleFileChange}
+        onChange={(e) => void handleFileChange(e)}
         ref={fileInputRef}
         style={{ display: "none" }}
         type="file"
@@ -175,21 +175,21 @@ const VideoPlayer: React.FC = () => {
           }
           className={styles.playerArea}
           onDragOver={handleDragOver}
-          onDrop={handleDrop}
+          onDrop={(e) => void handleDrop(e)}
         >
           {/* 音声ファイルの場合のプレースホルダー */}
           {videoQueue[currentIndex] && (
             <AudioPlayer currentItem={videoQueue[currentIndex]} />
           )}
           {/* ローディングスピナー */}
-          {isBuffering && <div className={styles.loadingOverlay}><div className={styles.spinner} /></div>}
+          {isBuffering && (
+            <div className={styles.loadingOverlay}>
+              <div className={styles.spinner} />
+            </div>
+          )}
           {/* メディアプレーヤー */}
           {shouldShowPlayer && (
             <ReactPlayer
-              height="100%"
-              key={videoUrl}
-              loop={videoQueue.length <= 1}
-              muted={muted}
               onDurationChange={(e: React.SyntheticEvent<HTMLVideoElement>) => {
                 const dur = e.currentTarget.duration;
 
@@ -207,10 +207,6 @@ const VideoPlayer: React.FC = () => {
                   dispatch({ type: "SET_IS_PLAYING", value: true });
                 }
               }}
-              onCanPlayThrough={() => setIsBuffering(false)}
-              onPause={() => dispatch({ type: "SET_IS_PLAYING", value: false })}
-              onPlay={() => dispatch({ type: "SET_IS_PLAYING", value: true })}
-              onWaiting={() => setIsBuffering(true)}
               onTimeUpdate={(e: React.SyntheticEvent<HTMLVideoElement>) => {
                 const playedSeconds = e.currentTarget.currentTime;
 
@@ -219,6 +215,14 @@ const VideoPlayer: React.FC = () => {
                   currentTimeRef.current = playedSeconds;
                 }
               }}
+              height="100%"
+              key={videoUrl}
+              loop={videoQueue.length <= 1}
+              muted={muted}
+              onCanPlayThrough={() => setIsBuffering(false)}
+              onPause={() => dispatch({ type: "SET_IS_PLAYING", value: false })}
+              onPlay={() => dispatch({ type: "SET_IS_PLAYING", value: true })}
+              onWaiting={() => setIsBuffering(true)}
               playing={isPlaying}
               ref={playerRef}
               src={videoUrl}
@@ -234,7 +238,7 @@ const VideoPlayer: React.FC = () => {
           className={styles.dropZone}
           onClick={() => fileInputRef.current?.click()}
           onDragOver={handleDragOver}
-          onDrop={handleDrop}
+          onDrop={(e) => void handleDrop(e)}
         >
           <div className={styles.placeholder}>
             <img

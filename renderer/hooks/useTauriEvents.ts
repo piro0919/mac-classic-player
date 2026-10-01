@@ -1,15 +1,15 @@
 import { invoke } from "@tauri-apps/api/core";
-import { listen } from "@tauri-apps/api/event";
+import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { readFile, stat } from "@tauri-apps/plugin-fs";
 import { useEffect, useRef } from "react";
-import type { VideoQueueAction } from "../store/videoQueueReducer";
-import type { VideoItem } from "../types/videoTypes";
 import {
   AUDIO_EXTENSIONS,
   parseAudioMetadata,
   parseFileName,
 } from "../utils/mediaFile";
+import type { VideoQueueAction } from "../store/videoQueueReducer";
+import type { VideoItem } from "../types/videoTypes";
 
 // MIMEタイプのマッピング
 const MIME_MAP: Record<string, string> = {
@@ -19,24 +19,19 @@ const MIME_MAP: Record<string, string> = {
   mp4: "video/mp4",
   wav: "audio/wav",
 };
-
 const MEDIA_EXTENSIONS = ["mp4", "mov", "mp3", "m4a", "wav"];
-
 // ファイルパスから拡張子とベース名を抽出する
 const parseFilePath = (filePath: string): { baseName: string; ext: string } =>
   parseFileName(filePath.split("/").pop() || "");
-
 // Blob URLでメモリに読み込む上限（500MB）
 // これを超えるファイルはローカルHTTPサーバー経由でストリーミング再生する
 const MAX_BLOB_SIZE = 500 * 1024 * 1024;
-
 // ファイルパスからVideoItemを作成する
 // 通常はreadFile + Blob URLで再生する
 // 大容量ファイルはローカルHTTPサーバー経由でRange request対応のストリーミング再生する
 const filePathToVideoItem = async (filePath: string): Promise<VideoItem> => {
   const { baseName, ext } = parseFilePath(filePath);
   const mime = MIME_MAP[ext] || "application/octet-stream";
-
   // ファイルサイズをチェックして読み込み方法を決定する
   const fileInfo = await stat(filePath);
   const isLargeFile = fileInfo.size > MAX_BLOB_SIZE;
@@ -63,7 +58,6 @@ const filePathToVideoItem = async (filePath: string): Promise<VideoItem> => {
 
   return { ext, metadata, name: baseName, url };
 };
-
 // 複数のファイルパスからVideoItemの配列を作成する
 const filePathsToVideoItems = async (
   filePaths: string[],
@@ -72,7 +66,6 @@ const filePathsToVideoItems = async (
 
   return items;
 };
-
 // ファイルをロードして再生を開始する共通処理
 const loadAndPlayFiles = async (
   filePaths: string[],
@@ -96,6 +89,29 @@ const loadAndPlayFiles = async (
   } catch (error) {
     console.error("ファイル読み込みエラー:", error);
   }
+};
+// イベント購読を登録し、解除する関数を返す
+// listen()のPromiseが解決する前にcleanupが走るとunlistenがundefinedのまま
+// リスナーが残ってしまうため、cancelledフラグで取りこぼしを防ぐ
+const subscribe = (registration: Promise<UnlistenFn>): (() => void) => {
+  let unlisten: undefined | UnlistenFn;
+  let cancelled = false;
+
+  registration
+    .then((fn) => {
+      if (cancelled) fn();
+      else unlisten = fn;
+
+      return undefined;
+    })
+    .catch((error: unknown) => {
+      console.error("イベント購読エラー:", error);
+    });
+
+  return () => {
+    cancelled = true;
+    unlisten?.();
+  };
 };
 
 export const useTauriEvents = (
@@ -125,85 +141,64 @@ export const useTauriEvents = (
 
   // Rustバックエンドからの「open-file」イベントを受信する
   // メニューの「ファイルを開く」や、macOSの「ファイルで開く」で発火
-  useEffect(() => {
-    // listen()のPromiseが解決する前にcleanupが走るとunlistenがundefinedのまま
-    // リスナーが残ってしまうため、cancelledフラグで取りこぼしを防ぐ
-    let unlisten: (() => void) | undefined;
-    let cancelled = false;
+  useEffect(
+    () =>
+      subscribe(
+        listen<string[]>("open-file", (event) => {
+          if (ignoreNextOpenFileRef.current) {
+            ignoreNextOpenFileRef.current = false;
 
-    listen<string[]>("open-file", (event) => {
-      if (ignoreNextOpenFileRef.current) {
-        ignoreNextOpenFileRef.current = false;
+            return;
+          }
 
-        return;
-      }
+          const filePaths = event.payload;
 
-      const filePaths = event.payload;
+          if (!filePaths || filePaths.length === 0) return;
 
-      if (!filePaths || filePaths.length === 0) return;
-
-      loadAndPlayFiles(filePaths, dispatch, seekToTime);
-    }).then((fn) => {
-      if (cancelled) fn();
-      else unlisten = fn;
-    });
-
-    return () => {
-      cancelled = true;
-      unlisten?.();
-    };
-  }, [dispatch, seekToTime]);
+          loadAndPlayFiles(filePaths, dispatch, seekToTime);
+        }),
+      ),
+    [dispatch, seekToTime],
+  );
 
   // Rustバックエンドからの「toggle-help」イベントを受信する
   // メニューの「ショートカット一覧を表示」で発火
-  useEffect(() => {
-    let unlisten: (() => void) | undefined;
-    let cancelled = false;
-
-    listen("toggle-help", () => {
-      setShowHelp((prev) => !prev);
-    }).then((fn) => {
-      if (cancelled) fn();
-      else unlisten = fn;
-    });
-
-    return () => {
-      cancelled = true;
-      unlisten?.();
-    };
-  }, [setShowHelp]);
+  useEffect(
+    () =>
+      subscribe(
+        listen("toggle-help", () => {
+          setShowHelp((prev) => !prev);
+        }),
+      ),
+    [setShowHelp],
+  );
 
   // Tauriのネイティブドラッグ&ドロップイベントを処理する
   // Tauri v2ではブラウザのdropイベントではなく、ネイティブイベントでファイルパスが渡される
-  useEffect(() => {
-    let unlisten: (() => void) | undefined;
-    let cancelled = false;
+  useEffect(
+    () =>
+      subscribe(
+        getCurrentWebview().onDragDropEvent(
+          (event: { payload: { paths?: string[]; type: string } }) => {
+            if (event.payload.type !== "drop") return;
 
-    getCurrentWebview()
-      .onDragDropEvent((event: { payload: { paths?: string[]; type: string } }) => {
-        if (event.payload.type !== "drop") return;
+            const mediaPaths = (event.payload.paths ?? []).filter(
+              (p: string) => {
+                const ext = p.split(".").pop()?.toLowerCase() || "";
 
-        const mediaPaths = (event.payload.paths ?? []).filter((p: string) => {
-          const ext = p.split(".").pop()?.toLowerCase() || "";
+                return MEDIA_EXTENSIONS.includes(ext);
+              },
+            );
 
-          return MEDIA_EXTENSIONS.includes(ext);
-        });
+            if (mediaPaths.length === 0) return;
 
-        if (mediaPaths.length === 0) return;
-
-        loadAndPlayFiles(mediaPaths, dispatch, seekToTime);
-        invoke("add_recent_files", { paths: mediaPaths });
-      })
-      .then((fn) => {
-        if (cancelled) fn();
-        else unlisten = fn;
-      });
-
-    return () => {
-      cancelled = true;
-      unlisten?.();
-    };
-  }, [dispatch, seekToTime]);
+            loadAndPlayFiles(mediaPaths, dispatch, seekToTime);
+            invoke("add_recent_files", { paths: mediaPaths });
+          },
+        ),
+      ),
+    [dispatch, seekToTime],
+  );
 
   // ドラッグ&ドロップ時のopen-file抑制フラグを設定する関数を返す
   const suppressNextOpenFile = () => {

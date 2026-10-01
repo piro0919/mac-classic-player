@@ -2,10 +2,12 @@
 import { Buffer } from "buffer";
 
 globalThis.Buffer = Buffer;
-
 import { LogicalSize } from "@tauri-apps/api/dpi";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { restoreStateCurrent, StateFlags } from "@tauri-apps/plugin-window-state";
+import {
+  restoreStateCurrent,
+  StateFlags,
+} from "@tauri-apps/plugin-window-state";
 import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App";
@@ -13,16 +15,20 @@ import "./styles/global.css";
 
 // ウィンドウの位置を前回の状態から復元する（SIZE以外）
 // SIZE はプラグインのPhysicalSize処理がRetinaで2倍になるため、JSでLogicalSizeで管理する
-restoreStateCurrent(StateFlags.POSITION | StateFlags.FULLSCREEN).catch(() => {});
+restoreStateCurrent(StateFlags.POSITION | StateFlags.FULLSCREEN).catch(
+  () => {},
+);
 
 // ウィンドウサイズをLogicalSizeで復元する
 const savedSize = localStorage.getItem("windowSize");
 
 if (savedSize) {
   try {
-    const { width, height } = JSON.parse(savedSize);
+    const { height, width } = JSON.parse(savedSize);
 
-    getCurrentWindow().setSize(new LogicalSize(width, height)).catch(() => {});
+    getCurrentWindow()
+      .setSize(new LogicalSize(width, height))
+      .catch(() => {});
   } catch {
     // パースエラー時は無視
   }

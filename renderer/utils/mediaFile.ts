@@ -2,7 +2,7 @@
 // useTauriEvents（Tauriファイルシステム経由）とuseMediaFiles（ブラウザFile API経由）の
 // 両方から使われるため、ここに集約する
 
-import { parseBuffer, type IAudioMetadata } from "music-metadata-browser";
+import { type IAudioMetadata, parseBuffer } from "music-metadata-browser";
 
 /// 音声ファイルの拡張子（メタデータ解析対象）
 export const AUDIO_EXTENSIONS = ["mp3", "m4a", "aac", "flac", "wav"];
