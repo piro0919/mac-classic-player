@@ -72,6 +72,7 @@ renderer/
 - **大容量ファイル（>500MB）**: readFile + Blob URLではなく、ローカルHTTPサーバー経由でRange request対応のストリーミング再生。
   ポートは他のプロセスやWebページからも叩けるので、起動ごとの乱数トークンをURLに含め、ユーザーが開いたファイルだけを配信する。
   URLは `get_stream_url` コマンドで発行する。CORSヘッダーは付けない
+- **ファイルの読み取り権限**: capabilitiesにfsの静的scopeは置かない。ユーザーが開いたファイルだけを `allow_opened_paths` で個別に許可する
 - **最近使ったファイル**: 最大10件、`{app_config_dir}/recent_files.json` に永続化、Rust側のみで完結
 - **自動更新**: minisign鍵（`~/.tauri/mac-classic-player.key`）で署名、GitHub Releases経由で配布
 - **ドラッグ&ドロップ**: Tauri v2のネイティブイベント（`onDragDropEvent`）を使用、ブラウザのdropイベントではない

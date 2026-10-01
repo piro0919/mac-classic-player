@@ -7,14 +7,8 @@
     "dialog:default",
     "dialog:allow-open",
     "fs:default",
-    {
-      "identifier": "fs:allow-read-file",
-      "allow": [{ "path": "$HOME/**" }, { "path": "/Volumes/**" }]
-    },
-    {
-      "identifier": "fs:allow-stat",
-      "allow": [{ "path": "$HOME/**" }, { "path": "/Volumes/**" }]
-    },
+    "fs:allow-read-file",
+    "fs:allow-stat",
     "core:window:allow-set-fullscreen",
     "shell:allow-open",
     "updater:default",
