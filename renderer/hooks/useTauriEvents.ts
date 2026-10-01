@@ -30,17 +30,6 @@ const parseFilePath = (filePath: string): { baseName: string; ext: string } =>
 // これを超えるファイルはローカルHTTPサーバー経由でストリーミング再生する
 const MAX_BLOB_SIZE = 500 * 1024 * 1024;
 
-// ストリーミングサーバーのポート番号をキャッシュする
-let streamPortCache: number | null = null;
-
-const getStreamPort = async (): Promise<number> => {
-  if (streamPortCache === null) {
-    streamPortCache = await invoke<number>("get_stream_port");
-  }
-
-  return streamPortCache;
-};
-
 // ファイルパスからVideoItemを作成する
 // 通常はreadFile + Blob URLで再生する
 // 大容量ファイルはローカルHTTPサーバー経由でRange request対応のストリーミング再生する
@@ -57,9 +46,8 @@ const filePathToVideoItem = async (filePath: string): Promise<VideoItem> => {
 
   if (isLargeFile) {
     // 大容量ファイル: ローカルHTTPサーバー経由でストリーミング
-    const port = await getStreamPort();
-
-    url = `http://127.0.0.1:${port}${encodeURI(filePath)}`;
+    // URLにはRust側が発行したトークンが含まれ、開いたファイルにしか発行されない
+    url = await invoke<string>("get_stream_url", { path: filePath });
   } else {
     // 通常ファイル: readFile + Blob URLで再生
     const contents = await readFile(filePath);

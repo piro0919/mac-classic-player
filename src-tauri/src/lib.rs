@@ -1,10 +1,11 @@
 // Mac Classic Player - メインアプリケーションロジック
 // Tauriプラグインの初期化、メニュー構築、ファイルオープンイベント処理を行う
 
+use std::collections::HashSet;
 use std::io::{BufRead, BufReader, Read, Seek, SeekFrom, Write};
 use std::net::TcpListener;
-use std::path::PathBuf;
-use std::sync::Mutex;
+use std::path::{Path, PathBuf};
+use std::sync::{Arc, Mutex};
 use tauri::{
     menu::{AboutMetadata, MenuBuilder, MenuItemBuilder, PredefinedMenuItem, SubmenuBuilder},
     Emitter, Manager, RunEvent,
@@ -24,14 +25,21 @@ fn lock_through_poison<'a, T>(m: &'a Mutex<T>, what: &str) -> std::sync::MutexGu
     })
 }
 
-/// 受信したファイルパスをfsプラグインのランタイムscopeに動的追加する
-/// capabilitiesの静的scope（globベース）はdot-prefixedディレクトリ
-/// （例: `/Volumes/HIKSEMI/.CloudStorage/...`）を含むパスにマッチしないため、
-/// ユーザーが明示的に開いたファイルは個別に許可する必要がある
-fn allow_paths_in_fs_scope<R: tauri::Runtime, M: Manager<R>>(manager: &M, paths: &[String]) {
+/// ユーザーが明示的に開いたファイルだけを、fsプラグインとストリーミングサーバーに許可する
+///
+/// capabilitiesには静的なscopeを置いていない。フロントエンドが読めるのは、
+/// ダイアログ・Finderの「このアプリケーションで開く」・最近使ったファイル・
+/// ドラッグ&ドロップでユーザーが選んだファイルだけ（ドラッグ&ドロップ分は
+/// fsプラグインが自分でscopeに足すので、ここではストリーミング側だけ足す）。
+fn allow_opened_paths<R: tauri::Runtime, M: Manager<R>>(manager: &M, paths: &[String]) {
     let scope = manager.fs_scope();
+    let stream = manager.try_state::<StreamServer>();
     for p in paths {
-        let _ = scope.allow_file(std::path::Path::new(p));
+        let path = Path::new(p);
+        let _ = scope.allow_file(path);
+        if let Some(stream) = &stream {
+            stream.access.allow(path);
+        }
     }
 }
 
@@ -42,9 +50,71 @@ fn allow_paths_in_fs_scope<R: tauri::Runtime, M: Manager<R>>(manager: &M, paths:
 /// macOSの「ファイルで開く」イベントで受け取ったファイルパスを一時保存する
 struct OpenedFiles(Mutex<Vec<String>>);
 
-/// ローカルストリーミングサーバーのポート番号
+/// ローカルストリーミングサーバー
 /// 大容量メディアファイルをRange request対応のHTTPで配信する
-struct StreamServerPort(u16);
+struct StreamServer {
+    port: u16,
+    access: Arc<StreamAccess>,
+}
+
+/// ストリーミングサーバーへのアクセス制御
+///
+/// ポートは同じマシン上のどのプロセスやWebページからも叩けるので、
+/// 推測できないトークンをURLに含め、ユーザーが開いたファイルだけを配信する。
+struct StreamAccess {
+    token: String,
+    /// 正規化済み（シンボリックリンクと `..` を解決した）パス
+    allowed: Mutex<HashSet<PathBuf>>,
+}
+
+impl StreamAccess {
+    fn new(token: String) -> Self {
+        Self {
+            token,
+            allowed: Mutex::new(HashSet::new()),
+        }
+    }
+
+    /// 開いたファイルを配信対象に加える。存在しないパスは加えない
+    fn allow(&self, path: &Path) {
+        if let Ok(canonical) = std::fs::canonicalize(path) {
+            lock_through_poison(&self.allowed, "stream_allowed").insert(canonical);
+        }
+    }
+
+    /// 配信してよいファイルなら正規化済みのパスを返す
+    fn resolve(&self, path: &Path) -> Option<PathBuf> {
+        let canonical = std::fs::canonicalize(path).ok()?;
+        lock_through_poison(&self.allowed, "stream_allowed")
+            .contains(&canonical)
+            .then_some(canonical)
+    }
+
+    /// トークンを比較する。一致までの時間で中身を推測されないよう全バイトを見る
+    fn token_matches(&self, candidate: &str) -> bool {
+        let (a, b) = (self.token.as_bytes(), candidate.as_bytes());
+        if a.len() != b.len() {
+            return false;
+        }
+        a.iter().zip(b).fold(0u8, |acc, (x, y)| acc | (x ^ y)) == 0
+    }
+}
+
+/// 32バイトの乱数を16進文字列にしたトークンを作る
+fn generate_stream_token() -> String {
+    let mut bytes = [0u8; 32];
+    getrandom::fill(&mut bytes).expect("乱数の取得に失敗");
+    bytes.iter().map(|b| format!("{b:02x}")).collect()
+}
+
+/// ストリーミング再生用のURLを組み立てる
+/// パスは `/` も含めて丸ごとエンコードし、トークンの後ろの1セグメントに収める
+fn stream_url(port: u16, token: &str, path: &str) -> String {
+    format!(
+        "http://127.0.0.1:{port}/{token}/{}",
+        urlencoding::encode(path)
+    )
+}
 
 /// 最近使ったファイルの最大保持数
 const MAX_RECENT_FILES: usize = 10;
@@ -135,10 +205,14 @@ fn get_pending_files(state: tauri::State<OpenedFiles>) -> Vec<String> {
     result
 }
 
-/// ストリーミングサーバーのポート番号を返す
+/// 開いたファイルのストリーミング用URLを返す
+/// ユーザーが開いていないファイルにはURLを発行しない
 #[tauri::command]
-fn get_stream_port(state: tauri::State<StreamServerPort>) -> u16 {
-    state.0
+fn get_stream_url(state: tauri::State<StreamServer>, path: String) -> Result<String, String> {
+    if state.access.resolve(Path::new(&path)).is_none() {
+        return Err("このファイルは開かれていません".to_string());
+    }
+    Ok(stream_url(state.port, &state.access.token, &path))
 }
 
 /// フロントエンドからファイルパスを最近使ったファイルに追加する
@@ -158,19 +232,45 @@ fn add_recent_files(app: tauri::AppHandle, paths: Vec<String>) {
 // =============================================================================
 
 /// ストリーミングサーバーを起動し、ポート番号を返す
-fn start_stream_server() -> u16 {
-    let listener = TcpListener::bind("127.0.0.1:0").expect("ストリーミングサーバーの起動に失敗");
-    let port = listener.local_addr().unwrap().port();
+fn start_stream_server(access: Arc<StreamAccess>) -> std::io::Result<u16> {
+    let listener = TcpListener::bind("127.0.0.1:0")?;
+    let port = listener.local_addr()?.port();
 
     std::thread::spawn(move || {
         for stream in listener.incoming().flatten() {
+            let access = Arc::clone(&access);
             std::thread::spawn(move || {
-                handle_stream_connection(stream);
+                handle_stream_connection(stream, &access);
             });
         }
     });
 
-    port
+    Ok(port)
+}
+
+/// 本文なしの応答を返す
+fn write_empty_response(stream: &mut std::net::TcpStream, status: &str, extra_headers: &str) {
+    let _ = stream.write_all(
+        format!("HTTP/1.1 {status}\r\n{extra_headers}Content-Length: 0\r\nConnection: close\r\n\r\n")
+            .as_bytes(),
+    );
+}
+
+/// リクエストターゲット `/{token}/{エンコード済みパス}` を検証し、配信するファイルを決める
+///
+/// トークンが無い・違うときは 403、開かれていないファイルは 404。
+/// 存在しないファイルと許可されていないファイルは区別しない。
+fn authorize_target(target: &str, access: &StreamAccess) -> Result<PathBuf, &'static str> {
+    let target = target.split('?').next().unwrap_or("");
+    let rest = target.strip_prefix('/').ok_or("403 Forbidden")?;
+    let (token, encoded_path) = rest.split_once('/').ok_or("403 Forbidden")?;
+    if !access.token_matches(token) {
+        return Err("403 Forbidden");
+    }
+    let path = urlencoding::decode(encoded_path).map_err(|_| "404 Not Found")?;
+    access
+        .resolve(Path::new(path.as_ref()))
+        .ok_or("404 Not Found")
 }
 
 /// `Range:` ヘッダーの値を、配信するファイルのサイズに突き合わせて解決する
@@ -221,23 +321,26 @@ fn resolve_range(range_str: &str, file_size: u64) -> Option<(u64, u64)> {
 }
 
 /// HTTP接続を処理してファイルをストリーミング配信する
-fn handle_stream_connection(mut stream: std::net::TcpStream) {
+///
+/// `<video>` は crossorigin なしで読み込むのでCORSヘッダーは付けない。
+/// 付けると他のオリジンのページからも中身を読めてしまう。
+fn handle_stream_connection(mut stream: std::net::TcpStream, access: &StreamAccess) {
     let reader_stream = match stream.try_clone() {
         Ok(s) => s,
         Err(_) => return,
     };
     let mut reader = BufReader::new(reader_stream);
 
-    // リクエスト行を読み取る (例: GET /path/to/file HTTP/1.1)
+    // リクエスト行を読み取る (例: GET /{token}/{path} HTTP/1.1)
     let mut request_line = String::new();
     if reader.read_line(&mut request_line).is_err() {
         return;
     }
     let parts: Vec<&str> = request_line.split_whitespace().collect();
-    if parts.len() < 2 || parts[0] != "GET" {
+    if parts.len() < 2 {
+        write_empty_response(&mut stream, "400 Bad Request", "");
         return;
     }
-    let path = urlencoding::decode(parts[1]).unwrap_or_default().to_string();
 
     // ヘッダーを読み取り、Range headerを探す
     let mut range_header = None;
@@ -251,18 +354,36 @@ fn handle_stream_connection(mut stream: std::net::TcpStream) {
         }
     }
 
+    if parts[0] != "GET" {
+        write_empty_response(&mut stream, "405 Method Not Allowed", "Allow: GET\r\n");
+        return;
+    }
+
+    let path = match authorize_target(parts[1], access) {
+        Ok(p) => p,
+        Err(status) => {
+            write_empty_response(&mut stream, status, "");
+            return;
+        }
+    };
+
     // ファイルを開く
     let mut file = match std::fs::File::open(&path) {
         Ok(f) => f,
         Err(_) => {
-            let _ = stream.write_all(b"HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\n\r\n");
+            write_empty_response(&mut stream, "404 Not Found", "");
             return;
         }
     };
     let file_size = file.metadata().map(|m| m.len()).unwrap_or(0);
 
     // MIMEタイプを拡張子から判定
-    let content_type = match path.rsplit('.').next().unwrap_or("") {
+    let ext = path
+        .extension()
+        .and_then(|e| e.to_str())
+        .unwrap_or("")
+        .to_ascii_lowercase();
+    let content_type = match ext.as_str() {
         "mp4" => "video/mp4",
         "mov" => "video/quicktime",
         "mp3" => "audio/mpeg",
@@ -274,15 +395,10 @@ fn handle_stream_connection(mut stream: std::net::TcpStream) {
     if let Some(range_str) = range_header {
         // Range requestの処理 (例: bytes=0-1048575)
         let Some((start, end)) = resolve_range(&range_str, file_size) else {
-            let _ = stream.write_all(
-                format!(
-                    "HTTP/1.1 416 Range Not Satisfiable\r\n\
-                     Content-Range: bytes */{file_size}\r\n\
-                     Content-Length: 0\r\n\
-                     Access-Control-Allow-Origin: *\r\n\
-                     \r\n"
-                )
-                .as_bytes(),
+            write_empty_response(
+                &mut stream,
+                "416 Range Not Satisfiable",
+                &format!("Content-Range: bytes */{file_size}\r\n"),
             );
             return;
         };
@@ -295,8 +411,7 @@ fn handle_stream_connection(mut stream: std::net::TcpStream) {
              Content-Range: bytes {start}-{end}/{file_size}\r\n\
              Content-Length: {length}\r\n\
              Accept-Ranges: bytes\r\n\
-             Access-Control-Allow-Origin: *\r\n\
-             Access-Control-Expose-Headers: Content-Range, Content-Length, Accept-Ranges\r\n\
+             Connection: close\r\n\
              \r\n"
         );
         let _ = stream.write_all(header.as_bytes());
@@ -308,8 +423,7 @@ fn handle_stream_connection(mut stream: std::net::TcpStream) {
              Content-Type: {content_type}\r\n\
              Content-Length: {file_size}\r\n\
              Accept-Ranges: bytes\r\n\
-             Access-Control-Allow-Origin: *\r\n\
-             Access-Control-Expose-Headers: Content-Range, Content-Length, Accept-Ranges\r\n\
+             Connection: close\r\n\
              \r\n"
         );
         let _ = stream.write_all(header.as_bytes());
@@ -522,7 +636,9 @@ fn rebuild_menu(app_handle: &tauri::AppHandle) {
 // =============================================================================
 pub fn run() {
     // ストリーミングサーバーを起動
-    let stream_port = start_stream_server();
+    let stream_access = Arc::new(StreamAccess::new(generate_stream_token()));
+    let stream_port =
+        start_stream_server(Arc::clone(&stream_access)).expect("ストリーミングサーバーの起動に失敗");
 
     // アプリビルダーの設定
     let app = tauri::Builder::default()
@@ -549,9 +665,12 @@ pub fn run() {
         .plugin(tauri_plugin_updater::Builder::new().build())
         // --- アプリ状態の管理 ---
         .manage(OpenedFiles(Mutex::new(Vec::new())))
-        .manage(StreamServerPort(stream_port))
+        .manage(StreamServer {
+            port: stream_port,
+            access: stream_access,
+        })
         // --- Tauriコマンドの登録 ---
-        .invoke_handler(tauri::generate_handler![get_pending_files, get_stream_port, add_recent_files])
+        .invoke_handler(tauri::generate_handler![get_pending_files, get_stream_url, add_recent_files])
         // --- アプリのセットアップ ---
         .setup(|app| {
             // システムの言語設定を取得して日本語かどうか判定
@@ -605,7 +724,7 @@ pub fn run() {
                                     })
                                     .collect();
                                 if !paths.is_empty() {
-                                    allow_paths_in_fs_scope(&handle, &paths);
+                                    allow_opened_paths(&handle, &paths);
                                     // フロントエンドにファイルパスを送信
                                     let _ = handle.emit("open-file", &paths);
                                     // 最近使ったファイルに追加
@@ -644,7 +763,7 @@ pub fn run() {
                                     let paths = recent.get_paths();
                                     if let Some(path) = paths.get(index) {
                                         let path_vec = vec![path.clone()];
-                                        allow_paths_in_fs_scope(&app_handle, &path_vec);
+                                        allow_opened_paths(&app_handle, &path_vec);
                                         let _ = app_handle.emit("open-file", &path_vec);
                                         recent.add_paths(&path_vec);
                                         rebuild_menu(&app_handle);
@@ -765,6 +884,21 @@ pub fn run() {
 
     // --- アプリケーションの実行とイベントハンドリング ---
     app.run(|app_handle, event| {
+        // ドラッグ&ドロップされたファイルもストリーミング配信の対象にする
+        // （fsプラグイン側のscopeはプラグイン自身が追加する）
+        if let RunEvent::WindowEvent {
+            event: tauri::WindowEvent::DragDrop(tauri::DragDropEvent::Drop { paths, .. }),
+            ..
+        } = &event
+        {
+            if let Some(stream) = app_handle.try_state::<StreamServer>() {
+                for path in paths {
+                    stream.access.allow(path);
+                }
+            }
+            return;
+        }
+
         if let RunEvent::Opened { urls } = event {
             // macOSの「ファイルで開く」イベント
             // Finderからのダブルクリックや「このアプリケーションで開く」で発火する
@@ -778,7 +912,7 @@ pub fn run() {
                 return;
             }
 
-            allow_paths_in_fs_scope(app_handle, &paths);
+            allow_opened_paths(app_handle, &paths);
 
             // 最近使ったファイルに追加
             if let Some(recent) = app_handle.try_state::<RecentFiles>() {
@@ -880,6 +1014,171 @@ mod tests {
     #[test]
     fn a_one_byte_file_can_be_requested_whole() {
         assert_eq!(resolve_range("bytes=0-0", 1), Some((0, 0)));
+    }
+
+    // --- ストリーミングサーバーのアクセス制御 ---
+
+    const TOKEN: &str = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+
+    /// テストごとに別名の一時ファイルを作る（0..=255 の繰り返し）
+    fn temp_media(name: &str, len: usize) -> PathBuf {
+        let dir = std::env::temp_dir().join(format!("mcp-stream-test-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join(name);
+        let bytes: Vec<u8> = (0..len).map(|i| (i % 256) as u8).collect();
+        std::fs::write(&path, bytes).unwrap();
+        path
+    }
+
+    /// サーバーを立ち上げ、`allowed` だけを開いた状態にする
+    fn serve(allowed: &[&Path]) -> u16 {
+        let access = Arc::new(StreamAccess::new(TOKEN.to_string()));
+        for p in allowed {
+            access.allow(p);
+        }
+        start_stream_server(access).unwrap()
+    }
+
+    /// 生のリクエストを送り、ヘッダーと本文に分けて返す
+    fn send(port: u16, request: &str) -> (String, Vec<u8>) {
+        let mut stream = std::net::TcpStream::connect(("127.0.0.1", port)).unwrap();
+        stream.write_all(request.as_bytes()).unwrap();
+        let mut raw = Vec::new();
+        stream.read_to_end(&mut raw).unwrap();
+        let split = raw.windows(4).position(|w| w == b"\r\n\r\n").unwrap();
+        let head = String::from_utf8_lossy(&raw[..split]).to_string();
+        (head, raw[split + 4..].to_vec())
+    }
+
+    fn get(port: u16, target: &str, range: Option<&str>) -> (String, Vec<u8>) {
+        let range = range.map(|r| format!("Range: {r}\r\n")).unwrap_or_default();
+        send(
+            port,
+            &format!("GET {target} HTTP/1.1\r\nHost: 127.0.0.1\r\n{range}\r\n"),
+        )
+    }
+
+    fn target(token: &str, path: &Path) -> String {
+        format!("/{token}/{}", urlencoding::encode(path.to_str().unwrap()))
+    }
+
+    #[test]
+    fn an_opened_file_is_served_with_range() {
+        let file = temp_media("opened.mp4", 4096);
+        let port = serve(&[&file]);
+        let (head, body) = get(port, &target(TOKEN, &file), Some("bytes=10-19"));
+        assert!(head.starts_with("HTTP/1.1 206"), "{head}");
+        assert!(head.contains("Content-Range: bytes 10-19/4096"), "{head}");
+        assert!(head.contains("Content-Type: video/mp4"), "{head}");
+        assert_eq!(body, (10u8..20).collect::<Vec<u8>>());
+        // どのオリジンからでも読めるようにするヘッダーは付けない
+        assert!(!head.to_lowercase().contains("access-control-allow-origin"), "{head}");
+    }
+
+    #[test]
+    fn an_opened_file_is_served_whole_without_range() {
+        let file = temp_media("whole.mp3", 300);
+        let port = serve(&[&file]);
+        let (head, body) = get(port, &target(TOKEN, &file), None);
+        assert!(head.starts_with("HTTP/1.1 200"), "{head}");
+        assert_eq!(body.len(), 300);
+    }
+
+    #[test]
+    fn the_url_built_for_the_frontend_is_accepted() {
+        let file = temp_media("名前 に 空白 #1.mov", 64);
+        let port = serve(&[&file]);
+        let url = stream_url(port, TOKEN, file.to_str().unwrap());
+        let path_part = url.split_once(&format!("127.0.0.1:{port}")).unwrap().1;
+        let (head, _) = get(port, path_part, Some("bytes=0-"));
+        assert!(head.starts_with("HTTP/1.1 206"), "{head}");
+    }
+
+    #[test]
+    fn a_file_that_was_not_opened_is_rejected() {
+        let opened = temp_media("allowed.mp4", 64);
+        let other = temp_media("secret.mp4", 64);
+        let port = serve(&[&opened]);
+        let (head, body) = get(port, &target(TOKEN, &other), None);
+        assert!(head.starts_with("HTTP/1.1 404"), "{head}");
+        assert!(body.is_empty());
+        let (head, _) = get(port, &target(TOKEN, Path::new("/etc/passwd")), None);
+        assert!(head.starts_with("HTTP/1.1 404"), "{head}");
+    }
+
+    #[test]
+    fn dot_dot_cannot_escape_an_opened_file() {
+        let opened = temp_media("trav.mp4", 64);
+        let other = temp_media("trav-secret.mp4", 64);
+        let port = serve(&[&opened]);
+        // allowed のディレクトリを経由して別ファイルを指す
+        let sneaky = opened
+            .parent()
+            .unwrap()
+            .join("..")
+            .join(other.parent().unwrap().file_name().unwrap())
+            .join("trav-secret.mp4");
+        let (head, _) = get(port, &target(TOKEN, &sneaky), None);
+        assert!(head.starts_with("HTTP/1.1 404"), "{head}");
+    }
+
+    #[test]
+    fn a_missing_token_is_rejected() {
+        let file = temp_media("notoken.mp4", 64);
+        let port = serve(&[&file]);
+        let encoded = urlencoding::encode(file.to_str().unwrap()).to_string();
+        // 以前の形式（パスを直接置く）も、トークンが空のものも通さない
+        for t in [
+            file.to_str().unwrap().to_string(),
+            format!("/{encoded}"),
+            format!("//{encoded}"),
+            "/".to_string(),
+        ] {
+            let (head, _) = get(port, &t, Some("bytes=0-9"));
+            assert!(head.starts_with("HTTP/1.1 403"), "{t}: {head}");
+        }
+    }
+
+    #[test]
+    fn a_wrong_token_is_rejected() {
+        let file = temp_media("wrongtoken.mp4", 64);
+        let port = serve(&[&file]);
+        let wrong = TOKEN.replace('0', "1");
+        let (head, _) = get(port, &target(&wrong, &file), Some("bytes=0-9"));
+        assert!(head.starts_with("HTTP/1.1 403"), "{head}");
+        let (head, _) = get(port, &target(&TOKEN[..10], &file), None);
+        assert!(head.starts_with("HTTP/1.1 403"), "{head}");
+    }
+
+    #[test]
+    fn methods_other_than_get_are_rejected() {
+        let file = temp_media("post.mp4", 64);
+        let port = serve(&[&file]);
+        for method in ["POST", "PUT", "DELETE", "OPTIONS"] {
+            let (head, body) = send(
+                port,
+                &format!("{method} {} HTTP/1.1\r\nHost: 127.0.0.1\r\n\r\n", target(TOKEN, &file)),
+            );
+            assert!(head.starts_with("HTTP/1.1 405"), "{method}: {head}");
+            assert!(body.is_empty());
+        }
+    }
+
+    #[test]
+    fn an_unsatisfiable_range_gets_416() {
+        let file = temp_media("range416.mp4", 64);
+        let port = serve(&[&file]);
+        let (head, _) = get(port, &target(TOKEN, &file), Some("bytes=100-200"));
+        assert!(head.starts_with("HTTP/1.1 416"), "{head}");
+        assert!(head.contains("Content-Range: bytes */64"), "{head}");
+    }
+
+    #[test]
+    fn generated_tokens_are_long_and_distinct() {
+        let (a, b) = (generate_stream_token(), generate_stream_token());
+        assert_eq!(a.len(), 64);
+        assert!(a.chars().all(|c| c.is_ascii_hexdigit()));
+        assert_ne!(a, b);
     }
 
     // --- 最近使ったファイル ---

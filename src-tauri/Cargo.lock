@@ -2107,6 +2107,7 @@ checksum = "f9f8bd3e56ce4dfc153cf470fffbfa98c7620958b312ca5c3a4b8d5181fd13c6"
 name = "mac-classic-player"
 version = "0.4.0"
 dependencies = [
+ "getrandom 0.3.4",
  "serde",
  "serde_json",
  "sys-locale",
