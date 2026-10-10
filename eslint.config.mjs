@@ -1,5 +1,6 @@
 import { FlatCompat } from "@eslint/eslintrc";
 import js from "@eslint/js";
+import magicNumbers from "@piro0919/eslint-config";
 import tsParser from "@typescript-eslint/parser";
 import css from "eslint-plugin-css";
 import cssModules from "eslint-plugin-css-modules";
@@ -250,6 +251,8 @@ const eslintConfig = [
       "write-good-comments/write-good-comments": "error",
     },
   },
+  // 名前の無い数字を警告する（全リポジトリで共有する piro0919/eslint-config）
+  ...magicNumbers(),
 ];
 
 export default eslintConfig;

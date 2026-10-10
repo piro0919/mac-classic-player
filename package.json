@@ -29,6 +29,7 @@
     "@eslint/compat": "2.1.1",
     "@eslint/eslintrc": "^3.3.7",
     "@eslint/js": "9.39.5",
+    "@piro0919/eslint-config": "github:piro0919/eslint-config#v1.0.0",
     "@secretlint/secretlint-rule-preset-recommend": "12.3.1",
     "@tauri-apps/cli": "2.12.1",
     "@types/node": "24.19.1",
