@@ -4,7 +4,7 @@
     "url": "https://github.com/piro0919/mac-classic-player/issues"
   },
   "dependencies": {
-    "@mantine/hooks": "9.6.3",
+    "@mantine/hooks": "9.7.1",
     "@tauri-apps/api": "2.12.1",
     "@tauri-apps/plugin-dialog": "2.8.1",
     "@tauri-apps/plugin-fs": "2.6.0",
