@@ -150,6 +150,10 @@ export default async function Page({ params }: PageProps) {
         <Link className="underline" href="/privacy">
           {t("footer.privacy")}
         </Link>
+        <span className="px-2">·</span>
+        <a className="underline" href="https://buymeacoffee.com/piro0919">
+          Buy Me a Coffee
+        </a>
       </footer>
     </>
   );
