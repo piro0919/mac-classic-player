@@ -1,5 +1,6 @@
 import { useCallback, useEffect } from "react";
 import { type VideoQueueAction } from "../store/videoQueueReducer";
+import { DEFAULT_PLAYBACK_RATE, stepPlaybackRate } from "../utils/playbackRate";
 
 type KeyboardShortcutsProps = {
   currentTime: number;
@@ -8,8 +9,10 @@ type KeyboardShortcutsProps = {
   duration: number;
   fileInputRef: React.RefObject<HTMLInputElement | null>;
   seekToTime: (time: number) => void;
+  setPlaybackRate: (value: ((prev: number) => number) | number) => void;
   setShowHelp: React.Dispatch<React.SetStateAction<boolean>>;
   setShowInfo: React.Dispatch<React.SetStateAction<boolean>>;
+  setShowPlaylist: React.Dispatch<React.SetStateAction<boolean>>;
   setVolume: (value: ((prev: number) => number) | number) => void;
   showHelp: boolean;
   toggleFullscreen: () => Promise<void>;
@@ -22,14 +25,19 @@ export const useKeyboardShortcuts = ({
   duration,
   fileInputRef,
   seekToTime,
+  setPlaybackRate,
   setShowHelp,
   setShowInfo,
+  setShowPlaylist,
   setVolume,
   showHelp,
   toggleFullscreen,
 }: KeyboardShortcutsProps) => {
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
+      // ⌘やCtrlとの組み合わせはメニュー/OSに任せる
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+
       // 0-9キー: 再生位置を0-90%に
       if (e.code.startsWith("Digit") && e.code.length === 6) {
         const num = Number(e.code[5]);
@@ -135,6 +143,26 @@ export const useKeyboardShortcuts = ({
           setShowInfo((prev) => !prev);
 
           break;
+        case "KeyL": // プレイリスト表示トグル
+          e.preventDefault();
+          setShowPlaylist((prev) => !prev);
+
+          break;
+        case "BracketLeft": // 再生速度を下げる
+          e.preventDefault();
+          setPlaybackRate((prev) => stepPlaybackRate(prev, -1));
+
+          break;
+        case "BracketRight": // 再生速度を上げる
+          e.preventDefault();
+          setPlaybackRate((prev) => stepPlaybackRate(prev, 1));
+
+          break;
+        case "KeyR": // 再生速度をリセット
+          e.preventDefault();
+          setPlaybackRate(DEFAULT_PLAYBACK_RATE);
+
+          break;
       }
     },
     [
@@ -144,8 +172,10 @@ export const useKeyboardShortcuts = ({
       duration,
       fileInputRef,
       seekToTime,
+      setPlaybackRate,
       setShowHelp,
       setShowInfo,
+      setShowPlaylist,
       setVolume,
       showHelp,
       toggleFullscreen,
@@ -171,6 +201,9 @@ export const useKeyboardShortcuts = ({
     ["F", "Toggle Fullscreen"],
     ["O", "Open file dialog"],
     ["0 〜 9", "Seek to % position"],
+    ["[ / ]", "Speed -/+"],
+    ["R", "Reset speed to 1×"],
+    ["L", "Toggle playlist"],
     ["I", "Toggle track info"],
     ["?", "Show Shortcuts help"],
     ["Esc", "Close this help"],

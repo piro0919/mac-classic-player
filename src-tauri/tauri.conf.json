@@ -16,7 +16,10 @@
         "width": 800,
         "height": 450,
         "resizable": true,
-        "visible": false
+        "visible": false,
+        "minWidth": 480,
+        "minHeight": 300,
+        "theme": "Dark"
       }
     ],
     "security": {
