@@ -11,7 +11,6 @@
     "fs:allow-stat",
     "core:window:allow-set-fullscreen",
     "shell:allow-open",
-    "updater:default",
     "process:default",
     "window-state:default"
   ]

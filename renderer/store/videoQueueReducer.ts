@@ -22,6 +22,11 @@ export type VideoQueueAction =
     }
   | { files: VideoItem[]; type: typeof ActionTypes.LOAD_FILES }
   | { index: number; type: typeof ActionTypes.SET_INDEX }
+  | {
+      sourcePath: string;
+      type: typeof ActionTypes.SET_ITEM_URL;
+      url: string;
+    }
   | { time: number; type: typeof ActionTypes.SET_CURRENT_TIME }
   | { time: number; type: typeof ActionTypes.SET_DURATION }
   | { type: typeof ActionTypes.NEXT }
@@ -111,6 +116,17 @@ export function videoQueueReducer(
       return {
         ...state,
         isPlaying: action.value,
+      };
+    }
+    case ActionTypes.SET_ITEM_URL: {
+      // 変換が終わったファイルに再生用URLを設定
+      return {
+        ...state,
+        queue: state.queue.map((item) =>
+          item.needsConversion && item.sourcePath === action.sourcePath
+            ? { ...item, url: action.url }
+            : item,
+        ),
       };
     }
     case ActionTypes.SET_MUTED: {

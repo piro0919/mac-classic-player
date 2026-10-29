@@ -1,3 +1,4 @@
+import { invoke } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { FolderOpen } from "lucide-react";
 // VideoPlayer.tsx (メインコンポーネント)
@@ -16,6 +17,7 @@ import placeholderImage from "../assets/video-placeholder.png";
 import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
 // カスタムフックのインポート
 import { useMediaArtwork } from "../hooks/useMediaArtwork";
+import { useMediaConversion } from "../hooks/useMediaConversion";
 import { cleanupObjectUrls, useMediaFiles } from "../hooks/useMediaFiles";
 import { useTauriEvents } from "../hooks/useTauriEvents";
 import styles from "../styles/VideoPlayer.module.css";
@@ -25,6 +27,7 @@ import {
   sanitizePlaybackRate,
 } from "../utils/playbackRate";
 import AudioPlayer from "./AudioPlayer";
+import ConversionOverlay from "./ConversionOverlay";
 import HelpOverlay from "./HelpOverlay";
 // コンポーネントのインポート
 import MediaControls from "./MediaControls";
@@ -93,6 +96,11 @@ const VideoPlayer: React.FC = () => {
     () => videoQueue[currentIndex]?.url ?? null,
     [videoQueue, currentIndex],
   );
+  // ファイルを開く: Tauriのネイティブダイアログ（MKVのようにパスが必要な形式も開ける）
+  // ブラウザだけで動かしているときは<input type="file">にフォールバックする
+  const openFiles = useCallback(() => {
+    invoke("open_media_dialog").catch(() => fileInputRef.current?.click());
+  }, []);
   // 時間フォーマット関数
   const formatTime = useCallback((time: number): string => {
     const total = Math.max(0, Math.floor(time));
@@ -124,7 +132,7 @@ const VideoPlayer: React.FC = () => {
     currentTimeRef,
     dispatch,
     duration,
-    fileInputRef,
+    openFiles,
     seekToTime,
     setPlaybackRate,
     setShowHelp,
@@ -134,6 +142,11 @@ const VideoPlayer: React.FC = () => {
     showHelp,
     toggleFullscreen,
   });
+  const currentItem = videoQueue[currentIndex];
+  const { conversion, retry: retryConversion } = useMediaConversion(
+    currentItem,
+    dispatch,
+  );
   const { suppressNextOpenFile } = useTauriEvents(
     dispatch,
     seekToTime,
@@ -226,7 +239,7 @@ const VideoPlayer: React.FC = () => {
         >
           {formatPlaybackRate(playbackRate)}
         </div>
-        {videoUrl ? (
+        {videoQueue.length > 0 ? (
           // プレーヤーエリア
           <div
             onClick={() =>
@@ -247,7 +260,21 @@ const VideoPlayer: React.FC = () => {
               </div>
             )}
             {/* メディアプレーヤー */}
-            {shouldShowPlayer && (
+            {/* MKVなどの変換中・変換失敗の表示 */}
+            <ConversionOverlay
+              fileName={
+                currentItem ? `${currentItem.name}.${currentItem.ext}` : ""
+              }
+              onSkip={() => {
+                dispatch({ type: "NEXT" });
+                seekToTime(0);
+                dispatch({ type: "SET_IS_PLAYING", value: true });
+              }}
+              conversion={conversion}
+              hasNext={videoQueue.length > 1}
+              onRetry={retryConversion}
+            />
+            {shouldShowPlayer && videoUrl && (
               <ReactPlayer
                 onDurationChange={(
                   e: React.SyntheticEvent<HTMLVideoElement>,
@@ -310,7 +337,7 @@ const VideoPlayer: React.FC = () => {
           <div
             aria-label="Drop media files here or click to select"
             className={styles.dropZone}
-            onClick={() => fileInputRef.current?.click()}
+            onClick={openFiles}
             onDragOver={handleDragOver}
             onDrop={(e) => void handleDrop(e)}
           >
@@ -345,7 +372,8 @@ const VideoPlayer: React.FC = () => {
         currentIndex={currentIndex}
         currentTime={currentTime}
         dispatch={dispatch}
-        duration={duration}
+        // 変換待ちのファイルでは前のファイルの長さを出さない
+        duration={videoUrl ? duration : 0}
         formatTime={formatTime}
         isFullscreen={isFullscreen}
         isPlaying={isPlaying}

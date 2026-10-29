@@ -701,3 +701,133 @@
   overflow: hidden;
   position: relative;
 }
+
+/* ---------- MKVなどの変換 ---------- */
+.conversion {
+  align-items: center;
+  background: var(--bg);
+  cursor: default;
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  padding: 1.5rem;
+  position: absolute;
+  z-index: 20;
+}
+
+.conversionCard {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-width: 420px;
+  text-align: center;
+  width: 100%;
+}
+
+.conversionIcon {
+  color: #ff9f0a;
+  margin-bottom: 0.25rem;
+}
+
+.conversionTitle {
+  color: #f2f2f4;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.conversionFile {
+  color: var(--text-dim);
+  font-size: 0.8rem;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.conversionBar {
+  background: var(--track);
+  border-radius: 999px;
+  height: 6px;
+  margin: 0.6rem 0 0.2rem;
+  overflow: hidden;
+  width: 100%;
+}
+
+.conversionBarFill {
+  background: #0a84ff;
+  border-radius: inherit;
+  height: 100%;
+  transform-origin: left;
+  transition: transform 0.3s ease;
+}
+
+.conversionHint {
+  color: #c7c7cc;
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.conversionNote {
+  color: var(--text-dim);
+  font-size: 0.72rem;
+}
+
+.conversionError {
+  background: var(--surface);
+  border-radius: 6px;
+  color: #ff8a80;
+  font-family: ui-monospace, "SF Mono", monospace;
+  font-size: 0.72rem;
+  max-height: 6em;
+  overflow: auto;
+  overflow-wrap: anywhere;
+  padding: 0.5rem 0.7rem;
+  user-select: text;
+  width: 100%;
+}
+
+.conversionCommand {
+  align-items: center;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: #f2f2f4;
+  cursor: pointer;
+  display: flex;
+  gap: 0.6rem;
+  margin: 0.25rem 0;
+  padding: 0.45rem 0.75rem;
+}
+
+.conversionCommand code {
+  font-family: ui-monospace, "SF Mono", monospace;
+  font-size: 0.8rem;
+}
+
+.conversionCommand:hover {
+  background: var(--surface-hover);
+}
+
+.conversionActions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.6rem;
+}
+
+.conversionButton {
+  align-items: center;
+  background: var(--surface-hover);
+  border: none;
+  border-radius: 7px;
+  color: #f2f2f4;
+  cursor: pointer;
+  display: flex;
+  font-size: 0.8rem;
+  gap: 0.4rem;
+  padding: 0.45rem 0.9rem;
+}
+
+.conversionButton:hover {
+  background: #4a4a4f;
+}

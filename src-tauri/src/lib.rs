@@ -11,7 +11,11 @@ use tauri::{
     Emitter, Manager, RunEvent,
 };
 use tauri_plugin_fs::FsExt;
-use tauri_plugin_updater::UpdaterExt;
+
+mod convert;
+
+/// ファイルダイアログで選べる拡張子
+const MEDIA_EXTENSIONS: &[&str] = &["mp4", "mp3", "mov", "m4a", "wav", "mkv"];
 
 /// ポイズンしたMutexからも値を取り戻してロックする
 ///
@@ -213,6 +217,123 @@ fn get_stream_url(state: tauri::State<StreamServer>, path: String) -> Result<Str
         return Err("このファイルは開かれていません".to_string());
     }
     Ok(stream_url(state.port, &state.access.token, &path))
+}
+
+/// ファイルダイアログでメディアファイルを選ばせ、選ばれたものを開く
+/// （メニューの「開く」と、画面クリック・Oキーの両方から使う）
+fn pick_and_open_files(handle: tauri::AppHandle, filter_name: String) {
+    tauri::async_runtime::spawn(async move {
+        use tauri_plugin_dialog::DialogExt;
+        let file_response = handle
+            .dialog()
+            .file()
+            .add_filter(&filter_name, MEDIA_EXTENSIONS)
+            .blocking_pick_files();
+
+        if let Some(files) = file_response {
+            let paths: Vec<String> = files
+                .iter()
+                .filter_map(|f| f.as_path().and_then(|p| p.to_str().map(|s| s.to_string())))
+                .collect();
+            if !paths.is_empty() {
+                allow_opened_paths(&handle, &paths);
+                // フロントエンドにファイルパスを送信
+                let _ = handle.emit("open-file", &paths);
+                // 最近使ったファイルに追加
+                if let Some(recent) = handle.try_state::<RecentFiles>() {
+                    recent.add_paths(&paths);
+                }
+                rebuild_menu(&handle);
+            }
+        }
+    });
+}
+
+/// ダイアログのフィルター名（システムの言語に合わせる）
+fn media_filter_name() -> String {
+    let locale = sys_locale::get_locale().unwrap_or_else(|| "en".to_string());
+    if locale.starts_with("ja") {
+        "メディアファイル".to_string()
+    } else {
+        "Media Files".to_string()
+    }
+}
+
+/// フロントエンドからファイルダイアログを開く
+#[tauri::command]
+fn open_media_dialog(app: tauri::AppHandle) {
+    pick_and_open_files(app, media_filter_name());
+}
+
+/// 変換の進み具合（"convert-progress" イベントで送る）
+#[derive(serde::Serialize, Clone)]
+struct ConvertProgress {
+    path: String,
+    progress: f64,
+    mode: convert::Mode,
+}
+
+/// WebViewで直接再生できないファイル（MKVなど）をMP4に変換し、再生用のURLを返す
+///
+/// 変換済みならキャッシュをそのまま使う。ffmpegが見つからないときは
+/// `convert::ERR_FFMPEG_MISSING`、別のファイルの変換に切り替わって止められたときは
+/// `convert::ERR_CANCELLED` を返す。
+#[tauri::command]
+async fn prepare_media(app: tauri::AppHandle, path: String) -> Result<String, String> {
+    let input = app
+        .state::<StreamServer>()
+        .access
+        .resolve(Path::new(&path))
+        .ok_or_else(|| "このファイルは開かれていません".to_string())?;
+    tauri::async_runtime::spawn_blocking(move || prepare_media_blocking(&app, &path, &input))
+        .await
+        .map_err(|e| e.to_string())?
+}
+
+fn prepare_media_blocking(app: &tauri::AppHandle, path: &str, input: &Path) -> Result<String, String> {
+    let tools = convert::find_tools().ok_or_else(|| convert::ERR_FFMPEG_MISSING.to_string())?;
+    let dir = app
+        .path()
+        .app_cache_dir()
+        .map_err(|e| e.to_string())?
+        .join("converted");
+    std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
+    let output = dir.join(convert::cache_file_name(input).map_err(|e| e.to_string())?);
+
+    if !output.is_file() {
+        let info = convert::probe(&tools, input)?;
+        let (_, mode) = convert::build_args(&info, input, &output);
+        let emit = |progress: f64| {
+            let _ = app.emit(
+                "convert-progress",
+                ConvertProgress {
+                    path: path.to_string(),
+                    progress,
+                    mode,
+                },
+            );
+        };
+        emit(0.0);
+        app.state::<convert::Converter>()
+            .run(&tools, &info, input, &output, emit)?;
+    }
+
+    let stream = app.state::<StreamServer>();
+    stream.access.allow(&output);
+    Ok(stream_url(stream.port, &stream.access.token, &output.to_string_lossy()))
+}
+
+/// 変換を止める。`path` を渡したら、そのファイルの変換のときだけ止める
+#[tauri::command]
+fn cancel_conversion(converter: tauri::State<convert::Converter>, path: Option<String>) {
+    match path {
+        Some(p) => {
+            if let Ok(canonical) = std::fs::canonicalize(&p) {
+                converter.cancel(Some(&canonical));
+            }
+        }
+        None => converter.cancel(None),
+    }
 }
 
 /// フロントエンドからファイルパスを最近使ったファイルに追加する
@@ -661,16 +782,22 @@ pub fn run() {
                 )
                 .build(),
         )
-        // アップデーターのプラグイン
-        .plugin(tauri_plugin_updater::Builder::new().build())
         // --- アプリ状態の管理 ---
         .manage(OpenedFiles(Mutex::new(Vec::new())))
+        .manage(convert::Converter::default())
         .manage(StreamServer {
             port: stream_port,
             access: stream_access,
         })
         // --- Tauriコマンドの登録 ---
-        .invoke_handler(tauri::generate_handler![get_pending_files, get_stream_url, add_recent_files])
+        .invoke_handler(tauri::generate_handler![
+            get_pending_files,
+            get_stream_url,
+            add_recent_files,
+            open_media_dialog,
+            prepare_media,
+            cancel_conversion
+        ])
         // --- アプリのセットアップ ---
         .setup(|app| {
             // システムの言語設定を取得して日本語かどうか判定
@@ -682,6 +809,13 @@ pub fn run() {
             let recent_files = RecentFiles::load(&config_dir, is_japanese);
             let recent_paths = recent_files.get_paths();
             app.manage(recent_files);
+
+            // 書きかけ・古い変換キャッシュを片付ける
+            if let Ok(cache_dir) = app.path().app_cache_dir() {
+                std::thread::spawn(move || {
+                    convert::prune_cache(&cache_dir.join("converted"), convert::CACHE_MAX_AGE);
+                });
+            }
 
             // メニューの構築と設定
             let menu = build_app_menu(app.handle(), is_japanese, &recent_paths)?;
@@ -702,39 +836,7 @@ pub fn run() {
                 match id {
                     "open_file" => {
                         // ファイルダイアログを開く
-                        let handle = app_handle.clone();
-                        let filter = filter_name.clone();
-                        tauri::async_runtime::spawn(async move {
-                            use tauri_plugin_dialog::DialogExt;
-                            let file_response = handle
-                                .dialog()
-                                .file()
-                                .add_filter(
-                                    &filter,
-                                    &["mp4", "mp3", "mov", "m4a", "wav"],
-                                )
-                                .blocking_pick_files();
-
-                            if let Some(files) = file_response {
-                                let paths: Vec<String> = files
-                                    .iter()
-                                    .filter_map(|f| {
-                                        f.as_path()
-                                            .and_then(|p| p.to_str().map(|s| s.to_string()))
-                                    })
-                                    .collect();
-                                if !paths.is_empty() {
-                                    allow_opened_paths(&handle, &paths);
-                                    // フロントエンドにファイルパスを送信
-                                    let _ = handle.emit("open-file", &paths);
-                                    // 最近使ったファイルに追加
-                                    if let Some(recent) = handle.try_state::<RecentFiles>() {
-                                        recent.add_paths(&paths);
-                                    }
-                                    rebuild_menu(&handle);
-                                }
-                            }
-                        });
+                        pick_and_open_files(app_handle.clone(), filter_name.clone());
                     }
                     "clear_recent" => {
                         // 最近使ったファイルの履歴をクリア
@@ -751,7 +853,7 @@ pub fn run() {
                         // GitHubページを外部ブラウザで開く
                         let _ = tauri_plugin_opener::OpenerExt::opener(&app_handle)
                             .open_url(
-                                "https://github.com/piro0919/mac-classic-player",
+                                "https://github.com/Steve2412/mac-classic-player-strop",
                                 None::<&str>,
                             );
                     }
@@ -775,108 +877,6 @@ pub fn run() {
                 }
             });
 
-            // アップデートの確認（バックグラウンドで実行）
-            let update_handle = app.handle().clone();
-            let is_ja = is_japanese;
-            tauri::async_runtime::spawn(async move {
-                let updater = match update_handle.updater() {
-                    Ok(u) => u,
-                    Err(_) => return,
-                };
-                let update = match updater.check().await {
-                    Ok(Some(u)) => u,
-                    _ => return,
-                };
-
-                // ユーザーにアップデートを確認するダイアログを表示
-                use tauri_plugin_dialog::DialogExt;
-                let msg = if is_ja {
-                    format!(
-                        "新しいバージョン v{} が利用可能です。\nアップデートしますか？",
-                        update.version
-                    )
-                } else {
-                    format!(
-                        "Version v{} is available.\nWould you like to update?",
-                        update.version
-                    )
-                };
-                let title = if is_ja { "アップデート" } else { "Update" };
-                use tauri_plugin_dialog::MessageDialogButtons;
-                let cancel_label = if is_ja { "キャンセル" } else { "Cancel" };
-                let confirmed = update_handle
-                    .dialog()
-                    .message(msg)
-                    .title(title)
-                    .buttons(MessageDialogButtons::OkCancelCustom(
-                        "OK".to_string(),
-                        cancel_label.to_string(),
-                    ))
-                    .blocking_show();
-
-                if !confirmed {
-                    return;
-                }
-
-                // ダウンロードを実行（インストールと分離してエラーを特定しやすくする）
-                eprintln!("[updater] ダウンロード開始: v{}", update.version);
-                let bytes = match update.download(|chunk_len, total| {
-                    eprintln!("[updater] ダウンロード中: {} / {:?} bytes", chunk_len, total);
-                }, || {
-                    eprintln!("[updater] ダウンロード完了");
-                }).await {
-                    Ok(b) => b,
-                    Err(e) => {
-                        eprintln!("[updater] ダウンロードエラー: {}", e);
-                        let err_msg = if is_ja {
-                            format!("ダウンロードに失敗しました。\n{}", e)
-                        } else {
-                            format!("Download failed.\n{}", e)
-                        };
-                        update_handle
-                            .dialog()
-                            .message(err_msg)
-                            .title(title)
-                            .blocking_show();
-                        return;
-                    }
-                };
-
-                // インストールを実行
-                eprintln!("[updater] インストール開始 ({} bytes)", bytes.len());
-                match update.install(bytes) {
-                    Ok(_) => {
-                        eprintln!("[updater] インストール成功");
-                        // インストール完了を通知し、アプリを終了する
-                        // （macOSではAppHandle::restart()が正常に動作しないため手動再起動）
-                        let done_msg = if is_ja {
-                            "アップデートが完了しました。\nアプリを再起動してください。"
-                        } else {
-                            "Update complete.\nPlease restart the app."
-                        };
-                        update_handle
-                            .dialog()
-                            .message(done_msg)
-                            .title(title)
-                            .blocking_show();
-                        update_handle.exit(0);
-                    }
-                    Err(e) => {
-                        eprintln!("[updater] インストールエラー: {}", e);
-                        let err_msg = if is_ja {
-                            format!("インストールに失敗しました。\n{}", e)
-                        } else {
-                            format!("Installation failed.\n{}", e)
-                        };
-                        update_handle
-                            .dialog()
-                            .message(err_msg)
-                            .title(title)
-                            .blocking_show();
-                    }
-                }
-            });
-
             Ok(())
         })
         .build(tauri::generate_context!())
@@ -884,6 +884,14 @@ pub fn run() {
 
     // --- アプリケーションの実行とイベントハンドリング ---
     app.run(|app_handle, event| {
+        // 終了時に走っている変換（ffmpeg）を止める
+        if let RunEvent::Exit = event {
+            if let Some(converter) = app_handle.try_state::<convert::Converter>() {
+                converter.cancel(None);
+            }
+            return;
+        }
+
         // ドラッグ&ドロップされたファイルもストリーミング配信の対象にする
         // （fsプラグイン側のscopeはプラグイン自身が追加する）
         if let RunEvent::WindowEvent {
@@ -899,6 +907,7 @@ pub fn run() {
             return;
         }
 
+        #[cfg(target_os = "macos")]
         if let RunEvent::Opened { urls } = event {
             // macOSの「ファイルで開く」イベント
             // Finderからのダブルクリックや「このアプリケーションで開く」で発火する

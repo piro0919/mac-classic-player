@@ -5,6 +5,7 @@ import { readFile, stat } from "@tauri-apps/plugin-fs";
 import { useEffect, useRef } from "react";
 import {
   AUDIO_EXTENSIONS,
+  CONVERT_EXTENSIONS,
   parseAudioMetadata,
   parseFileName,
 } from "../utils/mediaFile";
@@ -19,7 +20,14 @@ const MIME_MAP: Record<string, string> = {
   mp4: "video/mp4",
   wav: "audio/wav",
 };
-const MEDIA_EXTENSIONS = ["mp4", "mov", "mp3", "m4a", "wav"];
+const MEDIA_EXTENSIONS = [
+  "mp4",
+  "mov",
+  "mp3",
+  "m4a",
+  "wav",
+  ...CONVERT_EXTENSIONS,
+];
 // ファイルパスから拡張子とベース名を抽出する
 const parseFilePath = (filePath: string): { baseName: string; ext: string } =>
   parseFileName(filePath.split("/").pop() || "");
@@ -31,6 +39,18 @@ const MAX_BLOB_SIZE = 500 * 1024 * 1024;
 // 大容量ファイルはローカルHTTPサーバー経由でRange request対応のストリーミング再生する
 const filePathToVideoItem = async (filePath: string): Promise<VideoItem> => {
   const { baseName, ext } = parseFilePath(filePath);
+
+  // MKVなどは再生するときに変換する（URLは変換後に設定される）
+  if (CONVERT_EXTENSIONS.includes(ext)) {
+    return {
+      ext,
+      name: baseName,
+      needsConversion: true,
+      sourcePath: filePath,
+      url: "",
+    };
+  }
+
   const mime = MIME_MAP[ext] || "application/octet-stream";
   // ファイルサイズをチェックして読み込み方法を決定する
   const fileInfo = await stat(filePath);
@@ -90,10 +110,11 @@ const loadAndPlayFiles = async (
     console.error("ファイル読み込みエラー:", error);
   }
 };
+
 // イベント購読を登録し、解除する関数を返す
 // listen()のPromiseが解決する前にcleanupが走るとunlistenがundefinedのまま
 // リスナーが残ってしまうため、cancelledフラグで取りこぼしを防ぐ
-const subscribe = (registration: Promise<UnlistenFn>): (() => void) => {
+export const subscribe = (registration: Promise<UnlistenFn>): (() => void) => {
   let unlisten: undefined | UnlistenFn;
   let cancelled = false;
 

@@ -7,7 +7,7 @@ type KeyboardShortcutsProps = {
   currentTimeRef: React.MutableRefObject<number>;
   dispatch: React.Dispatch<VideoQueueAction>;
   duration: number;
-  fileInputRef: React.RefObject<HTMLInputElement | null>;
+  openFiles: () => void;
   seekToTime: (time: number) => void;
   setPlaybackRate: (value: ((prev: number) => number) | number) => void;
   setShowHelp: React.Dispatch<React.SetStateAction<boolean>>;
@@ -23,7 +23,7 @@ export const useKeyboardShortcuts = ({
   currentTimeRef,
   dispatch,
   duration,
-  fileInputRef,
+  openFiles,
   seekToTime,
   setPlaybackRate,
   setShowHelp,
@@ -135,7 +135,7 @@ export const useKeyboardShortcuts = ({
           break;
         case "KeyO": // ファイル選択ダイアログを開く
           e.preventDefault();
-          fileInputRef.current?.click();
+          openFiles();
 
           break;
         case "KeyI": // トラック情報表示トグル
@@ -170,7 +170,7 @@ export const useKeyboardShortcuts = ({
       currentTimeRef,
       dispatch,
       duration,
-      fileInputRef,
+      openFiles,
       seekToTime,
       setPlaybackRate,
       setShowHelp,

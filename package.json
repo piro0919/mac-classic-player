@@ -1,7 +1,7 @@
 {
   "author": "piro <piro.haniwa@gmail.com> (https://kkweb.io/)",
   "bugs": {
-    "url": "https://github.com/piro0919/mac-classic-player/issues"
+    "url": "https://github.com/Steve2412/mac-classic-player-strop/issues"
   },
   "dependencies": {
     "@mantine/hooks": "9.7.3",
@@ -10,7 +10,6 @@
     "@tauri-apps/plugin-fs": "2.7.1",
     "@tauri-apps/plugin-process": "2.4.0",
     "@tauri-apps/plugin-shell": "2.5.0",
-    "@tauri-apps/plugin-updater": "2.14.0",
     "@tauri-apps/plugin-window-state": "2.5.0",
     "lucide-react": "0.577.0",
     "ms": "2.1.3",
@@ -83,7 +82,7 @@
   "productName": "Mac Classic Player",
   "repository": {
     "type": "git",
-    "url": "https://github.com/piro0919/mac-classic-player.git"
+    "url": "https://github.com/Steve2412/mac-classic-player-strop.git"
   },
   "scripts": {
     "build": "tauri build",
@@ -98,8 +97,7 @@
     "prettier": "prettier --write .",
     "release": "npm run release:create && npm run release:upload",
     "release:create": "gh release create v$npm_package_version -t \"Release v$npm_package_version\" --generate-notes",
-    "release:generate-latest": "node -e \"const fs=require('fs');const v=process.env.npm_package_version;const sig=fs.readFileSync('src-tauri/target/release/bundle/macos/Mac Classic Player.app.tar.gz.sig','utf8').trim();const json={version:v,notes:'',pub_date:new Date().toISOString(),platforms:{'darwin-aarch64':{signature:sig,url:'https://github.com/piro0919/mac-classic-player/releases/download/v'+v+'/Mac.Classic.Player.app.tar.gz'}}};fs.writeFileSync('latest.json',JSON.stringify(json,null,2))\"",
-    "release:upload": "npm run release:generate-latest && gh release upload v$npm_package_version \"src-tauri/target/release/bundle/dmg/Mac Classic Player_${npm_package_version}_aarch64.dmg\" \"src-tauri/target/release/bundle/macos/Mac Classic Player.app.tar.gz\" \"src-tauri/target/release/bundle/macos/Mac Classic Player.app.tar.gz.sig\" latest.json --clobber",
+    "release:upload": "gh release upload v$npm_package_version \"src-tauri/target/release/bundle/dmg/Mac Classic Player_${npm_package_version}_aarch64.dmg\" --clobber",
     "type-check": "tsc --noEmit"
   },
   "version": "0.4.0"

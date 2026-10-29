@@ -49,6 +49,12 @@
         "role": "Viewer"
       },
       {
+        "ext": ["mkv"],
+        "mimeType": "video/x-matroska",
+        "description": "Matroska Video",
+        "role": "Viewer"
+      },
+      {
         "ext": ["mp3"],
         "mimeType": "audio/mpeg",
         "description": "MP3 Audio",
@@ -69,15 +75,6 @@
     ],
     "macOS": {
       "minimumSystemVersion": "11.0"
-    },
-    "createUpdaterArtifacts": true
-  },
-  "plugins": {
-    "updater": {
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEM0OUUyMTE2RjMxMzBBQzMKUldURENoUHpGaUdleElHM3UwWnlBdjFYSWxsWVdTUVZVcTYzUUJtV2p5SVhzUmpvNTF3M3Q0dTQK",
-      "endpoints": [
-        "https://github.com/piro0919/mac-classic-player/releases/latest/download/latest.json"
-      ]
     }
   }
 }

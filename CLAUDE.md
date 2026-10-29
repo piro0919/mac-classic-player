@@ -12,19 +12,15 @@ macOS向けのクラシックUIメディアプレイヤー。Tauri v2 + React �
 
 ## ビルド（重要）
 
-ビルド時に以下の3つの環境変数が**必須**:
+このフォークでは自動更新（tauri-plugin-updater）を外しているので、署名鍵（TAURI_SIGNING_PRIVATE_KEY）は不要。
+ad-hoc署名だけ付けてビルドする:
 
 ```bash
-TAURI_SIGNING_PRIVATE_KEY="$(cat ~/.tauri/mac-classic-player.key)" \
-TAURI_SIGNING_PRIVATE_KEY_PASSWORD="$(security find-generic-password -a "$USER" -s mac-classic-player-tauri-key -w)" \
-APPLE_SIGNING_IDENTITY="-" \
-npm run build
+APPLE_SIGNING_IDENTITY="-" npm run build
 ```
 
-署名鍵のパスワードはこのファイルにもリポジトリにも書かない。キーチェーンに登録しておき、
-上のようにビルドのたびに読み出す。未登録なら一度だけ
-`security add-generic-password -a "$USER" -s mac-classic-player-tauri-key -w` で登録する
-（パスワードの入力を求められる）。
+MKVの再生には ffmpeg / ffprobe が必要（`brew install ffmpeg`）。`src-tauri/src/convert.rs` が
+Homebrew の場所（/opt/homebrew/bin, /usr/local/bin）とPATHから探す。
 
 ### APPLE_SIGNING_IDENTITY="-" を忘れると何が起きるか
 

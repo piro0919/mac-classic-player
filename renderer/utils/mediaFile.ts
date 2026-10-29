@@ -7,6 +7,9 @@ import { type IAudioMetadata, parseBuffer } from "music-metadata-browser";
 /// 音声ファイルの拡張子（メタデータ解析対象）
 export const AUDIO_EXTENSIONS = ["mp3", "m4a", "aac", "flac", "wav"];
 
+/// WebViewで直接再生できず、ffmpegでMP4に変換してから再生する拡張子
+export const CONVERT_EXTENSIONS = ["mkv"];
+
 /// ファイル名から拡張子とベース名を抽出する
 /// 入力はファイル名（パスではなく）。パスを渡す場合は呼び出し側でbasenameを抽出すること
 export const parseFileName = (

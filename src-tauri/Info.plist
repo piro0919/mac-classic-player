@@ -15,6 +15,7 @@
                 <string>public.mp3</string>
                 <string>public.wav</string>
                 <string>com.apple.m4a-audio</string>
+                <string>org.matroska.mkv</string>
                 <string>public.movie</string>
                 <string>public.audio</string>
             </array>
