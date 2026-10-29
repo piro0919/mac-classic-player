@@ -5,6 +5,8 @@ import { DEFAULT_PLAYBACK_RATE, stepPlaybackRate } from "../utils/playbackRate";
 type KeyboardShortcutsProps = {
   currentTime: number;
   currentTimeRef: React.MutableRefObject<number>;
+  cycleAudio: () => void;
+  cycleSubtitle: () => void;
   dispatch: React.Dispatch<VideoQueueAction>;
   duration: number;
   openFiles: () => void;
@@ -21,6 +23,8 @@ type KeyboardShortcutsProps = {
 export const useKeyboardShortcuts = ({
   currentTime,
   currentTimeRef,
+  cycleAudio,
+  cycleSubtitle,
   dispatch,
   duration,
   openFiles,
@@ -143,6 +147,16 @@ export const useKeyboardShortcuts = ({
           setShowInfo((prev) => !prev);
 
           break;
+        case "KeyB": // 音声トラックを切り替える
+          e.preventDefault();
+          cycleAudio();
+
+          break;
+        case "KeyC": // 字幕を切り替える（オフを含む）
+          e.preventDefault();
+          cycleSubtitle();
+
+          break;
         case "KeyL": // プレイリスト表示トグル
           e.preventDefault();
           setShowPlaylist((prev) => !prev);
@@ -168,6 +182,8 @@ export const useKeyboardShortcuts = ({
     [
       currentTime,
       currentTimeRef,
+      cycleAudio,
+      cycleSubtitle,
       dispatch,
       duration,
       openFiles,
@@ -203,6 +219,8 @@ export const useKeyboardShortcuts = ({
     ["0 〜 9", "Seek to % position"],
     ["[ / ]", "Speed -/+"],
     ["R", "Reset speed to 1×"],
+    ["B", "Next audio track"],
+    ["C", "Next subtitle / off"],
     ["L", "Toggle playlist"],
     ["I", "Toggle track info"],
     ["?", "Show Shortcuts help"],

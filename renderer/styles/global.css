@@ -2,6 +2,8 @@
 
 html,
 body {
+  /* WebView の下にネイティブの映像を描くので透明にしておく */
+  background-color: transparent;
   overflow: hidden;
 }
 
@@ -10,7 +12,6 @@ html:focus-within {
 }
 
 body {
-  background-color: #0d1117;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }

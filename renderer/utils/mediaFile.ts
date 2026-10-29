@@ -7,9 +7,6 @@ import { type IAudioMetadata, parseBuffer } from "music-metadata-browser";
 /// 音声ファイルの拡張子（メタデータ解析対象）
 export const AUDIO_EXTENSIONS = ["mp3", "m4a", "aac", "flac", "wav"];
 
-/// WebViewで直接再生できず、ffmpegでMP4に変換してから再生する拡張子
-export const CONVERT_EXTENSIONS = ["mkv"];
-
 /// ファイル名から拡張子とベース名を抽出する
 /// 入力はファイル名（パスではなく）。パスを渡す場合は呼び出し側でbasenameを抽出すること
 export const parseFileName = (
@@ -34,3 +31,39 @@ export const parseAudioMetadata = async (
     return undefined;
   }
 };
+
+/// 開けるメディアの拡張子（再生は mpv なので、ほとんどの形式に対応する）
+/// Rust側の MEDIA_EXTENSIONS（lib.rs）と揃えること
+export const MEDIA_EXTENSIONS = [
+  "mp4",
+  "m4v",
+  "mov",
+  "mkv",
+  "webm",
+  "avi",
+  "wmv",
+  "flv",
+  "ts",
+  "m2ts",
+  "mts",
+  "mpg",
+  "mpeg",
+  "ogv",
+  "3gp",
+  "mp3",
+  "m4a",
+  "aac",
+  "flac",
+  "wav",
+  "ogg",
+  "oga",
+  "opus",
+  "wma",
+  "aiff",
+  "aif",
+];
+
+let nextItemId = 1;
+
+/// VideoItem に振る番号
+export const newItemId = (): number => nextItemId++;

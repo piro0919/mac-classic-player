@@ -12,10 +12,16 @@ use tauri::{
 };
 use tauri_plugin_fs::FsExt;
 
-mod convert;
+mod mpv;
+mod player;
+#[cfg(target_os = "macos")]
+mod video_layer_macos;
 
-/// ファイルダイアログで選べる拡張子
-const MEDIA_EXTENSIONS: &[&str] = &["mp4", "mp3", "mov", "m4a", "wav", "mkv"];
+/// ファイルダイアログで選べる拡張子（再生は mpv なので、ほとんどの形式を開ける）
+const MEDIA_EXTENSIONS: &[&str] = &[
+    "mp4", "m4v", "mov", "mkv", "webm", "avi", "wmv", "flv", "ts", "m2ts", "mts", "mpg", "mpeg",
+    "ogv", "3gp", "mp3", "m4a", "aac", "flac", "wav", "ogg", "oga", "opus", "wma", "aiff", "aif",
+];
 
 /// ポイズンしたMutexからも値を取り戻してロックする
 ///
@@ -263,77 +269,6 @@ fn media_filter_name() -> String {
 #[tauri::command]
 fn open_media_dialog(app: tauri::AppHandle) {
     pick_and_open_files(app, media_filter_name());
-}
-
-/// 変換の進み具合（"convert-progress" イベントで送る）
-#[derive(serde::Serialize, Clone)]
-struct ConvertProgress {
-    path: String,
-    progress: f64,
-    mode: convert::Mode,
-}
-
-/// WebViewで直接再生できないファイル（MKVなど）をMP4に変換し、再生用のURLを返す
-///
-/// 変換済みならキャッシュをそのまま使う。ffmpegが見つからないときは
-/// `convert::ERR_FFMPEG_MISSING`、別のファイルの変換に切り替わって止められたときは
-/// `convert::ERR_CANCELLED` を返す。
-#[tauri::command]
-async fn prepare_media(app: tauri::AppHandle, path: String) -> Result<String, String> {
-    let input = app
-        .state::<StreamServer>()
-        .access
-        .resolve(Path::new(&path))
-        .ok_or_else(|| "このファイルは開かれていません".to_string())?;
-    tauri::async_runtime::spawn_blocking(move || prepare_media_blocking(&app, &path, &input))
-        .await
-        .map_err(|e| e.to_string())?
-}
-
-fn prepare_media_blocking(app: &tauri::AppHandle, path: &str, input: &Path) -> Result<String, String> {
-    let tools = convert::find_tools().ok_or_else(|| convert::ERR_FFMPEG_MISSING.to_string())?;
-    let dir = app
-        .path()
-        .app_cache_dir()
-        .map_err(|e| e.to_string())?
-        .join("converted");
-    std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
-    let output = dir.join(convert::cache_file_name(input).map_err(|e| e.to_string())?);
-
-    if !output.is_file() {
-        let info = convert::probe(&tools, input)?;
-        let (_, mode) = convert::build_args(&info, input, &output);
-        let emit = |progress: f64| {
-            let _ = app.emit(
-                "convert-progress",
-                ConvertProgress {
-                    path: path.to_string(),
-                    progress,
-                    mode,
-                },
-            );
-        };
-        emit(0.0);
-        app.state::<convert::Converter>()
-            .run(&tools, &info, input, &output, emit)?;
-    }
-
-    let stream = app.state::<StreamServer>();
-    stream.access.allow(&output);
-    Ok(stream_url(stream.port, &stream.access.token, &output.to_string_lossy()))
-}
-
-/// 変換を止める。`path` を渡したら、そのファイルの変換のときだけ止める
-#[tauri::command]
-fn cancel_conversion(converter: tauri::State<convert::Converter>, path: Option<String>) {
-    match path {
-        Some(p) => {
-            if let Ok(canonical) = std::fs::canonicalize(&p) {
-                converter.cancel(Some(&canonical));
-            }
-        }
-        None => converter.cancel(None),
-    }
 }
 
 /// フロントエンドからファイルパスを最近使ったファイルに追加する
@@ -784,7 +719,7 @@ pub fn run() {
         )
         // --- アプリ状態の管理 ---
         .manage(OpenedFiles(Mutex::new(Vec::new())))
-        .manage(convert::Converter::default())
+        .manage(player::PlayerState::default())
         .manage(StreamServer {
             port: stream_port,
             access: stream_access,
@@ -795,8 +730,13 @@ pub fn run() {
             get_stream_url,
             add_recent_files,
             open_media_dialog,
-            prepare_media,
-            cancel_conversion
+            player::mpv_start,
+            player::mpv_load,
+            player::mpv_set,
+            player::mpv_seek,
+            player::mpv_stop,
+            player::mpv_open_subtitle_dialog,
+            player::mpv_set_video_rect
         ])
         // --- アプリのセットアップ ---
         .setup(|app| {
@@ -809,13 +749,6 @@ pub fn run() {
             let recent_files = RecentFiles::load(&config_dir, is_japanese);
             let recent_paths = recent_files.get_paths();
             app.manage(recent_files);
-
-            // 書きかけ・古い変換キャッシュを片付ける
-            if let Ok(cache_dir) = app.path().app_cache_dir() {
-                std::thread::spawn(move || {
-                    convert::prune_cache(&cache_dir.join("converted"), convert::CACHE_MAX_AGE);
-                });
-            }
 
             // メニューの構築と設定
             let menu = build_app_menu(app.handle(), is_japanese, &recent_paths)?;
@@ -884,14 +817,6 @@ pub fn run() {
 
     // --- アプリケーションの実行とイベントハンドリング ---
     app.run(|app_handle, event| {
-        // 終了時に走っている変換（ffmpeg）を止める
-        if let RunEvent::Exit = event {
-            if let Some(converter) = app_handle.try_state::<convert::Converter>() {
-                converter.cancel(None);
-            }
-            return;
-        }
-
         // ドラッグ&ドロップされたファイルもストリーミング配信の対象にする
         // （fsプラグイン側のscopeはプラグイン自身が追加する）
         if let RunEvent::WindowEvent {

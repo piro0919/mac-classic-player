@@ -42,6 +42,8 @@ type MediaControlsProps = {
   setVolume: (value: ((prev: number) => number) | number) => void;
   showPlaylist: boolean;
   toggleFullscreen: () => Promise<void>;
+  // 音声・字幕メニュー（設定ボタンの左に置く）
+  trackMenu?: React.ReactNode;
   videoQueue: VideoItem[];
   volume: number;
 };
@@ -69,6 +71,7 @@ const MediaControls: React.FC<MediaControlsProps> = ({
   setVolume,
   showPlaylist,
   toggleFullscreen,
+  trackMenu,
   videoQueue,
   volume,
 }) => {
@@ -194,6 +197,7 @@ const MediaControls: React.FC<MediaControlsProps> = ({
         </div>
         {/* 右: 設定 / プレイリスト / フルスクリーン */}
         <div className={`${styles.sideGroup} ${styles.sideGroupEnd}`}>
+          {trackMenu}
           <div className={styles.settingsWrap} ref={settingsRef}>
             <button
               aria-expanded={showSettings}

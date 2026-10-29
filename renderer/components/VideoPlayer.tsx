@@ -5,40 +5,39 @@ import { FolderOpen } from "lucide-react";
 import React, {
   useCallback,
   useEffect,
-  useMemo,
   useReducer,
   useRef,
   useState,
 } from "react";
-import ReactPlayer from "react-player";
 import useLocalStorageState from "use-local-storage-state";
 import { initialState, videoQueueReducer } from "@/store/videoQueueReducer";
 import placeholderImage from "../assets/video-placeholder.png";
 import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
 // カスタムフックのインポート
 import { useMediaArtwork } from "../hooks/useMediaArtwork";
-import { useMediaConversion } from "../hooks/useMediaConversion";
-import { cleanupObjectUrls, useMediaFiles } from "../hooks/useMediaFiles";
+import { useMpvPlayer, useVideoRect } from "../hooks/useMpvPlayer";
 import { useTauriEvents } from "../hooks/useTauriEvents";
 import styles from "../styles/VideoPlayer.module.css";
+import { AUDIO_EXTENSIONS } from "../utils/mediaFile";
 import {
   DEFAULT_PLAYBACK_RATE,
   formatPlaybackRate,
   sanitizePlaybackRate,
 } from "../utils/playbackRate";
 import AudioPlayer from "./AudioPlayer";
-import ConversionOverlay from "./ConversionOverlay";
 import HelpOverlay from "./HelpOverlay";
 // コンポーネントのインポート
 import MediaControls from "./MediaControls";
+import PlayerNotice, { type Notice } from "./PlayerNotice";
 import PlaylistPanel from "./PlaylistPanel";
 import TrackInfoOverlay from "./TrackInfoOverlay";
+import TrackMenu from "./TrackMenu";
 
 const VideoPlayer: React.FC = () => {
   // Refs
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const currentTimeRef = useRef(0);
-  const playerRef = useRef<HTMLVideoElement | null>(null);
+  // 映像エリア（ここにネイティブの映像ビューを合わせる）
+  const [stageElement, setStageElement] = useState<HTMLDivElement | null>(null);
   // State管理
   const [videoState, dispatch] = useReducer(videoQueueReducer, initialState);
   const [volume, setVolume] = useLocalStorageState("volume", {
@@ -70,8 +69,6 @@ const VideoPlayer: React.FC = () => {
   const [showInfo, setShowInfo] = useState(false);
   const [infoVisible, setInfoVisible] = useState(false);
   const [helpVisible, setHelpVisible] = useState(false);
-  const [shouldShowPlayer, setShouldShowPlayer] = useState(true);
-  const [isBuffering, setIsBuffering] = useState(false);
   // ステートの解凍
   const {
     currentIndex,
@@ -91,16 +88,29 @@ const VideoPlayer: React.FC = () => {
     await win.setFullscreen(!current);
     setIsFullscreen(!current);
   }, []);
-  // 現在のビデオURLのメモ化
-  const videoUrl = useMemo(
-    () => videoQueue[currentIndex]?.url ?? null,
-    [videoQueue, currentIndex],
-  );
-  // ファイルを開く: Tauriのネイティブダイアログ（MKVのようにパスが必要な形式も開ける）
-  // ブラウザだけで動かしているときは<input type="file">にフォールバックする
+  const currentItem = videoQueue[currentIndex];
+  // ファイルを開く（Tauriのネイティブダイアログ）
   const openFiles = useCallback(() => {
-    invoke("open_media_dialog").catch(() => fileInputRef.current?.click());
+    invoke("open_media_dialog").catch(() => {});
   }, []);
+  // 再生が終わったら次のファイルへ（1つだけのときは mpv 側で繰り返す）
+  const handleEnded = useCallback(() => {
+    if (videoQueue.length > 1) {
+      dispatch({ type: "NEXT" });
+      dispatch({ type: "SET_IS_PLAYING", value: true });
+    }
+  }, [videoQueue.length]);
+  const mpv = useMpvPlayer({
+    currentItem,
+    dispatch,
+    isPlaying,
+    loopSingle: videoQueue.length <= 1,
+    muted,
+    onEnded: handleEnded,
+    playbackRate,
+    volume,
+  });
+  const { seek: mpvSeek } = mpv;
   // 時間フォーマット関数
   const formatTime = useCallback((time: number): string => {
     const total = Math.max(0, Math.floor(time));
@@ -114,15 +124,32 @@ const VideoPlayer: React.FC = () => {
     // 1時間以上の動画は h:mm:ss で表示
     return hours > 0 ? `${hours}:${mmss}` : mmss;
   }, []);
-  // シーク関数（react-player v3: HTMLVideoElementのcurrentTimeを直接操作）
-  const seekToTime = useCallback((time: number) => {
-    if (playerRef.current) {
-      playerRef.current.currentTime = time;
-    }
+  // シーク（mpv に送り、表示はすぐに更新する）
+  const seekToTime = useCallback(
+    (time: number) => {
+      mpvSeek(time);
+      currentTimeRef.current = time;
+      dispatch({ time, type: "SET_CURRENT_TIME" });
+    },
+    [mpvSeek],
+  );
+  // 音声・字幕トラックを順番に切り替える
+  const cycleTrack = useCallback(
+    (type: "audio" | "sub") => {
+      const ids = mpv.tracks.filter((t) => t.type === type).map((t) => t.id);
+      const current = type === "audio" ? mpv.audioId : mpv.subtitleId;
+      // 字幕は「オフ」も順番に含める
+      const order: ("no" | number)[] = type === "sub" ? ["no", ...ids] : ids;
 
-    currentTimeRef.current = time;
-    dispatch({ time, type: "SET_CURRENT_TIME" });
-  }, []);
+      if (order.length === 0) return;
+
+      const next = order[(order.indexOf(current) + 1) % order.length];
+
+      if (type === "audio") mpv.selectAudio(next);
+      else mpv.selectSubtitle(next);
+    },
+    [mpv],
+  );
 
   // カスタムフックの使用
   useMediaArtwork(videoQueue, dispatch);
@@ -130,6 +157,8 @@ const VideoPlayer: React.FC = () => {
   const { shortcuts } = useKeyboardShortcuts({
     currentTime,
     currentTimeRef,
+    cycleAudio: () => cycleTrack("audio"),
+    cycleSubtitle: () => cycleTrack("sub"),
     dispatch,
     duration,
     openFiles,
@@ -142,21 +171,31 @@ const VideoPlayer: React.FC = () => {
     showHelp,
     toggleFullscreen,
   });
-  const currentItem = videoQueue[currentIndex];
-  const { conversion, retry: retryConversion } = useMediaConversion(
-    currentItem,
-    dispatch,
-  );
-  const { suppressNextOpenFile } = useTauriEvents(
-    dispatch,
-    seekToTime,
-    setShowHelp,
-  );
-  const { handleDragOver, handleDrop, handleFileChange } = useMediaFiles(
-    dispatch,
-    seekToTime,
-    suppressNextOpenFile,
-  );
+
+  useTauriEvents(dispatch, seekToTime, setShowHelp);
+
+  // 映像があるファイルか（トラック一覧が届くまでは拡張子で判断）
+  const hasVideo =
+    mpv.tracks.length > 0
+      ? mpv.tracks.some((t) => t.type === "video" && !t.albumart)
+      : !!currentItem && !AUDIO_EXTENSIONS.includes(currentItem.ext);
+  // 案内を出すとき（エンジンが無い・再生できない）は映像を隠す
+  const notice: Notice | null =
+    mpv.status.kind === "missing"
+      ? { kind: "mpv-missing" }
+      : mpv.status.kind === "error"
+        ? { kind: "engine-error", message: mpv.status.message }
+        : currentItem && mpv.playbackError
+          ? {
+              fileName: `${currentItem.name}.${currentItem.ext}`,
+              kind: "playback-error",
+              message: mpv.playbackError,
+            }
+          : null;
+  const showVideo =
+    mpv.status.kind === "ready" && !!currentItem && hasVideo && !notice;
+
+  useVideoRect(stageElement, showVideo);
 
   // タイトル更新
   useEffect(() => {
@@ -189,14 +228,6 @@ const VideoPlayer: React.FC = () => {
     }
   }, [showHelp]);
 
-  useEffect(() => {
-    setShouldShowPlayer(false);
-
-    const timeout = setTimeout(() => setShouldShowPlayer(true), 10);
-
-    return () => clearTimeout(timeout);
-  }, [videoUrl]);
-
   // 速度が変わったらOSDを表示（初回マウント時は出さない）
   useEffect(() => {
     if (isFirstRateRender.current) {
@@ -212,26 +243,13 @@ const VideoPlayer: React.FC = () => {
     return () => clearTimeout(timeout);
   }, [playbackRate]);
 
-  // クリーンアップ
-  useEffect(() => {
-    return () => {
-      cleanupObjectUrls();
-    };
-  }, []);
-
   return (
     <div className={styles.container} ref={fullscreenRef}>
-      {/* ファイル選択インプット */}
-      <input
-        accept="video/*,audio/*"
-        multiple={true}
-        onChange={(e) => void handleFileChange(e)}
-        ref={fileInputRef}
-        style={{ display: "none" }}
-        type="file"
-      />
-      {/* 映像エリア（OSD・プレイリストはこの上に重ねる） */}
-      <div className={styles.stage}>
+      {/* 映像エリア（ネイティブの映像はこの下に描かれる。OSD・プレイリストは上に重ねる） */}
+      <div
+        className={`${styles.stage} ${showVideo ? styles.stageVideo : ""}`}
+        ref={setStageElement}
+      >
         {/* 再生速度OSD */}
         <div
           aria-live="polite"
@@ -239,107 +257,44 @@ const VideoPlayer: React.FC = () => {
         >
           {formatPlaybackRate(playbackRate)}
         </div>
-        {videoQueue.length > 0 ? (
-          // プレーヤーエリア
+        {videoQueue.length > 0 || notice ? (
+          // プレーヤーエリア（クリックで再生/一時停止）
           <div
             onClick={() =>
               dispatch({ type: "SET_IS_PLAYING", value: !isPlaying })
             }
             className={styles.playerArea}
-            onDragOver={handleDragOver}
-            onDrop={(e) => void handleDrop(e)}
           >
-            {/* 音声ファイルの場合のプレースホルダー */}
-            {videoQueue[currentIndex] && (
-              <AudioPlayer currentItem={videoQueue[currentIndex]} />
+            {/* 音声ファイルのジャケット */}
+            {currentItem && !hasVideo && (
+              <AudioPlayer currentItem={currentItem} />
             )}
-            {/* ローディングスピナー */}
-            {isBuffering && (
+            {/* 読み込み中 */}
+            {mpv.buffering && !notice && (
               <div className={styles.loadingOverlay}>
                 <div className={styles.spinner} />
               </div>
             )}
-            {/* メディアプレーヤー */}
-            {/* MKVなどの変換中・変換失敗の表示 */}
-            <ConversionOverlay
-              fileName={
-                currentItem ? `${currentItem.name}.${currentItem.ext}` : ""
-              }
+            <PlayerNotice
+              onRetry={() => {
+                if (notice?.kind === "playback-error") mpv.reloadFile();
+                else mpv.retryEngine();
+              }}
               onSkip={() => {
                 dispatch({ type: "NEXT" });
-                seekToTime(0);
                 dispatch({ type: "SET_IS_PLAYING", value: true });
               }}
-              conversion={conversion}
               hasNext={videoQueue.length > 1}
-              onRetry={retryConversion}
+              notice={notice}
             />
-            {shouldShowPlayer && videoUrl && (
-              <ReactPlayer
-                onDurationChange={(
-                  e: React.SyntheticEvent<HTMLVideoElement>,
-                ) => {
-                  const dur = e.currentTarget.duration;
-
-                  if (Number.isFinite(dur)) {
-                    dispatch({ time: dur, type: "SET_DURATION" });
-                  }
-                }}
-                onEnded={() => {
-                  if (videoQueue.length > 1) {
-                    dispatch({ type: "NEXT" });
-                    seekToTime(0);
-                    dispatch({ type: "SET_IS_PLAYING", value: true });
-                  } else {
-                    seekToTime(0);
-                    dispatch({ type: "SET_IS_PLAYING", value: true });
-                  }
-                }}
-                onLoadedMetadata={(
-                  e: React.SyntheticEvent<HTMLVideoElement>,
-                ) => {
-                  // src読み込み時にplaybackRateがdefaultPlaybackRateへ戻るため両方設定
-                  const media = e.currentTarget;
-
-                  media.defaultPlaybackRate = playbackRate;
-                  media.playbackRate = playbackRate;
-                  media.preservesPitch = true;
-                }}
-                onPause={() =>
-                  dispatch({ type: "SET_IS_PLAYING", value: false })
-                }
-                onTimeUpdate={(e: React.SyntheticEvent<HTMLVideoElement>) => {
-                  const playedSeconds = e.currentTarget.currentTime;
-
-                  if (Math.abs(playedSeconds - currentTimeRef.current) > 0.25) {
-                    dispatch({ time: playedSeconds, type: "SET_CURRENT_TIME" });
-                    currentTimeRef.current = playedSeconds;
-                  }
-                }}
-                height="100%"
-                key={videoUrl}
-                loop={videoQueue.length <= 1}
-                muted={muted}
-                onCanPlayThrough={() => setIsBuffering(false)}
-                onPlay={() => dispatch({ type: "SET_IS_PLAYING", value: true })}
-                onWaiting={() => setIsBuffering(true)}
-                playbackRate={playbackRate}
-                playing={isPlaying}
-                ref={playerRef}
-                src={videoUrl}
-                volume={volume}
-                width="100%"
-              />
-            )}
           </div>
         ) : (
           // ドロップゾーン（ファイルがロードされていない場合）
+          // ファイルのドロップは Tauri のネイティブイベントで受け取る（useTauriEvents）
           <div
             aria-label="Drop media files here or click to select"
             className={styles.dropZone}
             onClick={openFiles}
-            onDragOver={handleDragOver}
-            onDrop={(e) => void handleDrop(e)}
           >
             <div className={styles.emptyState}>
               <img
@@ -369,11 +324,22 @@ const VideoPlayer: React.FC = () => {
       </div>
       {/* 再生コントロール */}
       <MediaControls
+        trackMenu={
+          <TrackMenu
+            audioId={mpv.audioId}
+            disabled={mpv.status.kind !== "ready" || !currentItem}
+            onOpenSubtitleFile={mpv.openSubtitleFile}
+            onSelectAudio={mpv.selectAudio}
+            onSelectSubtitle={mpv.selectSubtitle}
+            subtitleId={mpv.subtitleId}
+            tracks={mpv.tracks}
+          />
+        }
         currentIndex={currentIndex}
         currentTime={currentTime}
         dispatch={dispatch}
-        // 変換待ちのファイルでは前のファイルの長さを出さない
-        duration={videoUrl ? duration : 0}
+        // 再生できないファイルでは前のファイルの長さを出さない
+        duration={notice ? 0 : duration}
         formatTime={formatTime}
         isFullscreen={isFullscreen}
         isPlaying={isPlaying}

@@ -5,78 +5,58 @@ import { readFile, stat } from "@tauri-apps/plugin-fs";
 import { useEffect, useRef } from "react";
 import {
   AUDIO_EXTENSIONS,
-  CONVERT_EXTENSIONS,
+  MEDIA_EXTENSIONS,
+  newItemId,
   parseAudioMetadata,
   parseFileName,
 } from "../utils/mediaFile";
 import type { VideoQueueAction } from "../store/videoQueueReducer";
 import type { VideoItem } from "../types/videoTypes";
 
-// MIMEタイプのマッピング
-const MIME_MAP: Record<string, string> = {
+// 音声メタデータ解析用のMIMEタイプ
+const AUDIO_MIME: Record<string, string> = {
+  aac: "audio/aac",
+  flac: "audio/flac",
   m4a: "audio/mp4",
-  mov: "video/quicktime",
   mp3: "audio/mpeg",
-  mp4: "video/mp4",
   wav: "audio/wav",
 };
-const MEDIA_EXTENSIONS = [
-  "mp4",
-  "mov",
-  "mp3",
-  "m4a",
-  "wav",
-  ...CONVERT_EXTENSIONS,
-];
 // ファイルパスから拡張子とベース名を抽出する
 const parseFilePath = (filePath: string): { baseName: string; ext: string } =>
   parseFileName(filePath.split("/").pop() || "");
-// Blob URLでメモリに読み込む上限（500MB）
-// これを超えるファイルはローカルHTTPサーバー経由でストリーミング再生する
-const MAX_BLOB_SIZE = 500 * 1024 * 1024;
+// メタデータを読むために丸ごと読み込む音声ファイルの上限（200MB）
+const MAX_METADATA_SIZE = 200 * 1024 * 1024;
 // ファイルパスからVideoItemを作成する
-// 通常はreadFile + Blob URLで再生する
-// 大容量ファイルはローカルHTTPサーバー経由でRange request対応のストリーミング再生する
+// 再生は mpv がパスから直接行うので、ここでは中身を読まない
+// （音声ファイルだけ、曲名やジャケットのためにメタデータを読む）
 const filePathToVideoItem = async (filePath: string): Promise<VideoItem> => {
   const { baseName, ext } = parseFilePath(filePath);
+  const item: VideoItem = {
+    ext,
+    id: newItemId(),
+    name: baseName,
+    path: filePath,
+    url: filePath,
+  };
 
-  // MKVなどは再生するときに変換する（URLは変換後に設定される）
-  if (CONVERT_EXTENSIONS.includes(ext)) {
-    return {
-      ext,
-      name: baseName,
-      needsConversion: true,
-      sourcePath: filePath,
-      url: "",
-    };
-  }
+  if (AUDIO_EXTENSIONS.includes(ext)) {
+    try {
+      const info = await stat(filePath);
 
-  const mime = MIME_MAP[ext] || "application/octet-stream";
-  // ファイルサイズをチェックして読み込み方法を決定する
-  const fileInfo = await stat(filePath);
-  const isLargeFile = fileInfo.size > MAX_BLOB_SIZE;
+      if (info.size <= MAX_METADATA_SIZE) {
+        const contents = await readFile(filePath);
 
-  let url: string;
-  let metadata: VideoItem["metadata"];
-
-  if (isLargeFile) {
-    // 大容量ファイル: ローカルHTTPサーバー経由でストリーミング
-    // URLにはRust側が発行したトークンが含まれ、開いたファイルにしか発行されない
-    url = await invoke<string>("get_stream_url", { path: filePath });
-  } else {
-    // 通常ファイル: readFile + Blob URLで再生
-    const contents = await readFile(filePath);
-    const blob = new Blob([contents], { type: mime });
-
-    url = `${URL.createObjectURL(blob)}#.${ext}`;
-
-    // 音声ファイルの場合、メタデータも解析する
-    if (AUDIO_EXTENSIONS.includes(ext)) {
-      metadata = await parseAudioMetadata(contents, mime);
+        item.metadata = await parseAudioMetadata(
+          contents,
+          AUDIO_MIME[ext] || "application/octet-stream",
+        );
+      }
+    } catch {
+      // メタデータが読めなくても再生はできる
     }
   }
 
-  return { ext, metadata, name: baseName, url };
+  return item;
 };
 // 複数のファイルパスからVideoItemの配列を作成する
 const filePathsToVideoItems = async (

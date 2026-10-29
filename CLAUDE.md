@@ -19,8 +19,8 @@ ad-hoc署名だけ付けてビルドする:
 APPLE_SIGNING_IDENTITY="-" npm run build
 ```
 
-MKVの再生には ffmpeg / ffprobe が必要（`brew install ffmpeg`）。`src-tauri/src/convert.rs` が
-Homebrew の場所（/opt/homebrew/bin, /usr/local/bin）とPATHから探す。
+再生エンジンは mpv（libmpv）。実行には `brew install mpv` が必要。
+`src-tauri/src/mpv/ffi.rs` が起動時に libmpv.2.dylib を dlopen で探す（/opt/homebrew/lib など）。
 
 ### APPLE_SIGNING_IDENTITY="-" を忘れると何が起きるか
 
@@ -77,6 +77,10 @@ renderer/
 - **最近使ったファイル**: 最大10件、`{app_config_dir}/recent_files.json` に永続化、Rust側のみで完結
 - **自動更新**: minisign鍵（`~/.tauri/mac-classic-player.key`）で署名、GitHub Releases経由で配布
 - **ドラッグ&ドロップ**: Tauri v2のネイティブイベント（`onDragDropEvent`）を使用、ブラウザのdropイベントではない
+- **再生エンジン**: HTMLの`<video>`ではなく mpv。`src-tauri/src/player.rs` がTauriコマンドとイベント（"mpv"）、
+  `src-tauri/src/video_layer_macos.rs` が WKWebView の下に置いた CAOpenGLLayer に mpv render API で映像を描く。
+  WebView は背景を透明にし、CSSで映像エリア（`.stageVideo`）だけを透けさせる。位置は `useVideoRect` が送る
+- **音声・字幕トラック**: mpv の `track-list` / `aid` / `sid` をそのまま使う（`TrackMenu`）
 
 ## .env
 

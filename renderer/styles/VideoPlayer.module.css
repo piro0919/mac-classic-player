@@ -10,7 +10,8 @@
   --text-dim: #8e8e93;
   --track: #48484c;
   --track-fill: #c9c9cd;
-  background-color: var(--bg);
+  /* 映像エリアだけ透けさせるため、背景は子要素ごとに塗る */
+  background-color: transparent;
   color: #fff;
   display: flex;
   flex-direction: column;
@@ -29,7 +30,7 @@
 }
 
 .playerArea {
-  background-color: #000;
+  background-color: transparent;
   cursor: pointer;
   display: flex;
   flex: 1;
@@ -694,6 +695,7 @@
 
 /* 映像エリア + 重ねる要素の基準 */
 .stage {
+  background-color: var(--bg);
   display: flex;
   flex: 1;
   flex-direction: column;
@@ -702,8 +704,8 @@
   position: relative;
 }
 
-/* ---------- MKVなどの変換 ---------- */
-.conversion {
+/* ---------- エンジン・再生エラーの案内 ---------- */
+.notice {
   align-items: center;
   background: var(--bg);
   cursor: default;
@@ -715,7 +717,7 @@
   z-index: 20;
 }
 
-.conversionCard {
+.noticeCard {
   align-items: center;
   display: flex;
   flex-direction: column;
@@ -725,18 +727,18 @@
   width: 100%;
 }
 
-.conversionIcon {
+.noticeIcon {
   color: #ff9f0a;
   margin-bottom: 0.25rem;
 }
 
-.conversionTitle {
+.noticeTitle {
   color: #f2f2f4;
   font-size: 1rem;
   font-weight: 600;
 }
 
-.conversionFile {
+.noticeFile {
   color: var(--text-dim);
   font-size: 0.8rem;
   max-width: 100%;
@@ -745,7 +747,7 @@
   white-space: nowrap;
 }
 
-.conversionBar {
+.noticeBar {
   background: var(--track);
   border-radius: 999px;
   height: 6px;
@@ -754,7 +756,7 @@
   width: 100%;
 }
 
-.conversionBarFill {
+.noticeBarFill {
   background: #0a84ff;
   border-radius: inherit;
   height: 100%;
@@ -762,18 +764,18 @@
   transition: transform 0.3s ease;
 }
 
-.conversionHint {
+.noticeHint {
   color: #c7c7cc;
   font-size: 0.8rem;
   font-variant-numeric: tabular-nums;
 }
 
-.conversionNote {
+.noticeNote {
   color: var(--text-dim);
   font-size: 0.72rem;
 }
 
-.conversionError {
+.noticeError {
   background: var(--surface);
   border-radius: 6px;
   color: #ff8a80;
@@ -787,7 +789,7 @@
   width: 100%;
 }
 
-.conversionCommand {
+.noticeCommand {
   align-items: center;
   background: var(--surface);
   border: 1px solid var(--border);
@@ -800,22 +802,22 @@
   padding: 0.45rem 0.75rem;
 }
 
-.conversionCommand code {
+.noticeCommand code {
   font-family: ui-monospace, "SF Mono", monospace;
   font-size: 0.8rem;
 }
 
-.conversionCommand:hover {
+.noticeCommand:hover {
   background: var(--surface-hover);
 }
 
-.conversionActions {
+.noticeActions {
   display: flex;
   gap: 0.5rem;
   margin-top: 0.6rem;
 }
 
-.conversionButton {
+.noticeButton {
   align-items: center;
   background: var(--surface-hover);
   border: none;
@@ -828,6 +830,74 @@
   padding: 0.45rem 0.9rem;
 }
 
-.conversionButton:hover {
+.noticeButton:hover {
   background: #4a4a4f;
+}
+
+/* 動画の再生中: WebView を透かして下のネイティブ映像を見せる */
+.stageVideo {
+  background-color: transparent;
+}
+
+/* ---------- 音声・字幕メニュー ---------- */
+.trackMenu {
+  max-height: min(70vh, 460px);
+  overflow-y: auto;
+  width: 290px;
+}
+
+.trackOption {
+  align-items: flex-start;
+  background: none;
+  border: none;
+  border-radius: 6px;
+  color: #e5e5e7;
+  cursor: pointer;
+  display: flex;
+  gap: 0.45rem;
+  padding: 0.35rem 0.4rem;
+  text-align: left;
+  width: 100%;
+}
+
+.trackOption:hover {
+  background: var(--surface-hover);
+}
+
+.trackOptionActive {
+  color: #fff;
+}
+
+.trackCheck {
+  color: #0a84ff;
+  display: flex;
+  flex-shrink: 0;
+  height: 1.2em;
+  justify-content: center;
+  padding-top: 0.1rem;
+  width: 14px;
+}
+
+.trackText {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.trackName {
+  font-size: 0.8rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.trackDetail {
+  color: var(--text-dim);
+  font-size: 0.68rem;
+}
+
+.trackEmpty {
+  color: var(--text-dim);
+  font-size: 0.78rem;
+  padding: 0.2rem 0.4rem 0.3rem;
 }
