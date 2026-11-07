@@ -1,0 +1,11 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "ignore": ["lp/**"],
+  "ignoreDependencies": [
+    "@secretlint/secretlint-rule-preset-recommend",
+    "eslint-config-prettier",
+    "eslint-plugin-no-unsanitized",
+    "eslint-plugin-security",
+    "ress"
+  ]
+}

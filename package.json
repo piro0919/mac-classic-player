@@ -4,19 +4,12 @@
     "url": "https://github.com/piro0919/mac-classic-player/issues"
   },
   "dependencies": {
-    "@mantine/hooks": "9.7.4",
     "@tauri-apps/api": "2.12.4",
-    "@tauri-apps/plugin-dialog": "2.8.4",
     "@tauri-apps/plugin-fs": "2.7.1",
-    "@tauri-apps/plugin-process": "2.4.0",
-    "@tauri-apps/plugin-shell": "2.6.0",
-    "@tauri-apps/plugin-updater": "2.14.1",
     "lucide-react": "0.577.0",
-    "ms": "2.1.3",
     "music-metadata-browser": "2.5.11",
     "react": "19.3.1",
     "react-dom": "19.3.1",
-    "react-dropzone": "15.0.0",
     "react-player": "3.4.0",
     "ress": "5.0.2",
     "use-local-storage-state": "19.5.0"
@@ -38,7 +31,6 @@
     "@typescript-eslint/parser": "8.71.1",
     "@uphold/commitlint-config": "1.1.1",
     "@vitejs/plugin-react": "6.1.2",
-    "dotenv-cli": "11.0.0",
     "eslint": "^9.39.5",
     "eslint-config-prettier": "10.1.8",
     "eslint-plugin-css": "0.12.0",
@@ -54,6 +46,7 @@
     "eslint-plugin-security": "4.2.0",
     "eslint-plugin-unused-imports": "4.4.1",
     "eslint-plugin-write-good-comments": "0.2.0",
+    "knip": "6.41.0",
     "lefthook": "2.2.1",
     "prettier": "3.9.9",
     "secretlint": "12.3.1",
@@ -96,10 +89,12 @@
     "lint:style": "stylelint --fix '**/*.css'",
     "prettier": "prettier --write .",
     "release": "npm run release:create && npm run release:upload",
-    "release:create": "gh release create v$npm_package_version -t \"Release v$npm_package_version\" --generate-notes",
+    "release:create": "bash scripts/release-check.sh create && gh release create v$npm_package_version --target \"$(git rev-parse HEAD)\" -t \"Release v$npm_package_version\" --generate-notes",
     "release:generate-latest": "node -e \"const fs=require('fs');const v=process.env.npm_package_version;const sig=fs.readFileSync('src-tauri/target/release/bundle/macos/Mac Classic Player.app.tar.gz.sig','utf8').trim();const json={version:v,notes:'',pub_date:new Date().toISOString(),platforms:{'darwin-aarch64':{signature:sig,url:'https://github.com/piro0919/mac-classic-player/releases/download/v'+v+'/Mac.Classic.Player.app.tar.gz'}}};fs.writeFileSync('latest.json',JSON.stringify(json,null,2))\"",
-    "release:upload": "npm run release:generate-latest && gh release upload v$npm_package_version \"src-tauri/target/release/bundle/dmg/Mac Classic Player_${npm_package_version}_aarch64.dmg\" \"src-tauri/target/release/bundle/macos/Mac Classic Player.app.tar.gz\" \"src-tauri/target/release/bundle/macos/Mac Classic Player.app.tar.gz.sig\" latest.json --clobber",
-    "type-check": "tsc --noEmit"
+    "release:upload": "bash scripts/release-check.sh upload && npm run release:generate-latest && gh release upload v$npm_package_version \"src-tauri/target/release/bundle/dmg/Mac Classic Player_${npm_package_version}_aarch64.dmg\" \"src-tauri/target/release/bundle/macos/Mac Classic Player.app.tar.gz\" \"src-tauri/target/release/bundle/macos/Mac Classic Player.app.tar.gz.sig\" latest.json",
+    "type-check": "tsc --noEmit",
+    "knip": "knip",
+    "secretlint": "git ls-files -z | xargs -0 secretlint --maskSecrets"
   },
   "version": "0.4.1"
 }
