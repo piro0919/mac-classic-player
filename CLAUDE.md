@@ -102,7 +102,11 @@ renderer/
 
 ## .env
 
-`.env` に `GH_TOKEN` と `APPLE_SIGNING_IDENTITY` が保存されている。secretlintで検出されるため `.gitignore` に含まれている。
+`.env` には `APPLE_SIGNING_IDENTITY` だけが保存されている。`.gitignore` に含まれている。
+Tauri もスクリプトも `.env` を読まないので、ビルドでは上のコマンドのように環境変数を自分で渡す。
+
+`npm run release` の `gh` は、gh 本体のログイン（キーチェーン）を使う。`GH_TOKEN` は置かない。
+以前は `.env` に置いていたが、失効したまま残っていて、読み込むと gh のログインより優先されて 401 で止まった（2026-11-07）。
 
 ## OGP 画像
 
