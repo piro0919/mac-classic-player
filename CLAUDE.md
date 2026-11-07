@@ -38,7 +38,19 @@ npm run build
 
 1. `src-tauri/tauri.conf.json` と `package.json` のバージョンを更新
 2. 上記の環境変数付きでビルド
-3. `npm run release`（GitHub Releaseの作成 + DMG/tar.gz/sig/latest.jsonアップロード）
+3. push してから `npm run release`（GitHub Releaseの作成 + DMG/tar.gz/sig/latest.jsonアップロード）
+   - `scripts/release-check.sh` が先に走り、追跡ファイルに未コミットの変更がある・HEAD が origin/main に無い・
+     package.json と tauri.conf.json の版数が違う・札 `v<版数>` が HEAD 以外を指している・ビルドしたアプリの版数が違う、
+     のどれかで止まる
+   - 札は `--target HEAD` で付ける。付けないと GitHub 上の main の先頭に付き、push し忘れると配る中身と札がずれる
+   - 上げた資産は上書きしない（`--clobber` を外してある）。差し替えるなら `gh release delete-asset` を手で
+   - Homebrew タップ（piro0919/homebrew-tap の `Casks/mac-classic-player.rb`）の version と sha256 も追随させる
+
+## 検査
+
+- コミット前（lefthook）: eslint・secretlint・stylelint・tsc。prettier は既存の184ファイルが未整形なので、まとめて整形するまで無効
+- CI: 上に加えて knip（使っていない依存とファイル）、Rust の試験、LP（`lp/`）の lint・型・ビルド
+- `lp/` は別の package.json を持つ Next.js のサイトで、knip の対象から外している
 
 ## 開発
 
