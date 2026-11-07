@@ -10,7 +10,8 @@
 #   - HEAD が origin/main に入っている（札は --target HEAD で付けるので、push 済みでないと付けられない）
 #   - package.json と src-tauri/tauri.conf.json の版数が一致している
 #   - 札 v<版数> がすでにあるなら、手元でも origin でも HEAD を指している
-#   - upload では、札が origin にあり、ビルドしたアプリの版数が一致している
+#   - ビルドした .app / tar.gz / sig / DMG が揃い、版数が一致し、HEAD のコミットより後に作られている
+#   - upload では、札が origin にある
 set -euo pipefail
 
 stage="${1:-}"
@@ -65,10 +66,29 @@ fi
 
 if [[ "$stage" == "upload" ]]; then
   [[ -n "$remote_sha" ]] || fail "札 $tag が origin にありません。先に release:create を走らせてください"
-  plist="src-tauri/target/release/bundle/macos/Mac Classic Player.app/Contents/Info.plist"
-  [[ -f "$plist" ]] || fail "$plist がありません。先にリリース用のビルドをしてください"
-  built="$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$plist")"
-  [[ "$built" == "$pkg_version" ]] || fail "ビルドしたアプリは $built、package.json は $pkg_version です。ビルドし直してください"
 fi
+
+# ビルドの確認は create でも行う。Release を作ってから資産が無いと分かると、
+# releases/latest が latest.json の無い版を指し、配った全員の自動更新が 404 になる
+bundle="src-tauri/target/release/bundle"
+app="$bundle/macos/Mac Classic Player.app"
+tarball="$bundle/macos/Mac Classic Player.app.tar.gz"
+sig="$tarball.sig"
+dmg="$bundle/dmg/Mac Classic Player_${pkg_version}_aarch64.dmg"
+for f in "$app/Contents/Info.plist" "$tarball" "$sig" "$dmg"; do
+  [[ -e "$f" ]] || fail "$f がありません。先にリリース用のビルドをしてください"
+done
+built="$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$app/Contents/Info.plist")"
+[[ "$built" == "$pkg_version" ]] || fail "ビルドしたアプリは $built、package.json は $pkg_version です。ビルドし直してください"
+
+# 版数を上げずにコミットを足した場合も、古いビルドを配らないよう、HEAD より後に作られたかを見る
+head_time="$(git log -1 --format=%ct HEAD)"
+for f in "$tarball" "$sig" "$dmg"; do
+  [[ "$(stat -f %m "$f")" -ge "$head_time" ]] ||
+    fail "$f は HEAD のコミットより前に作られています。ビルドし直してください"
+done
+# 署名は tar.gz と同じビルドで作られたものでないと、自動更新の署名検証で落ちる
+[[ "$(stat -f %m "$sig")" -ge "$(stat -f %m "$tarball")" ]] ||
+  fail "$sig が $tarball より古く、別のビルドの署名です。ビルドし直してください"
 
 echo "release-check ($stage): $tag at $head"

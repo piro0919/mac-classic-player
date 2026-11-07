@@ -1,3 +1,6 @@
+# 既定の照合では `**/*` が直下のファイルに、`renderer/**/*.tsx` が renderer 直下に当たらない
+glob_matcher: doublestar
+
 pre-commit:
   parallel: true
   commands:
