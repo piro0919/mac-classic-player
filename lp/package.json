@@ -7,7 +7,6 @@
     "react-dom": "^19.3.1"
   },
   "devDependencies": {
-    "@eslint/eslintrc": "^3.3.7",
     "@tailwindcss/postcss": "^4.3.3",
     "@types/node": "^24.19.1",
     "@types/react": "^19.3.0",
@@ -22,7 +21,7 @@
   "scripts": {
     "build": "next build",
     "dev": "next dev --turbopack",
-    "lint": "next lint",
+    "lint": "eslint .",
     "start": "next start",
     "typecheck": "tsc --noEmit"
   },
