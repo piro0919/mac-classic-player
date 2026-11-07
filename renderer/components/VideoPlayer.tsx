@@ -73,6 +73,17 @@ const VideoPlayer: React.FC = () => {
       .toString()
       .padStart(2, "0")}`;
   }, []);
+  // プレーヤーの要素を受け取る。ファイルの差し替えで外れる要素はここで止める
+  // WebKitは、シークした直後にDOMから外したメディア要素を止めずに鳴らし続ける。
+  // ファイルの読み込みや前後の曲への移動では、seekToTime(0)が描画の切り替え前の古い要素に当たるため、
+  // 止めないと前のファイルが裏で再生され続ける
+  const setPlayerRef = useCallback((node: HTMLVideoElement | null) => {
+    if (playerRef.current && playerRef.current !== node) {
+      playerRef.current.pause();
+    }
+
+    playerRef.current = node;
+  }, []);
   // シーク関数（react-player v3: HTMLVideoElementのcurrentTimeを直接操作）
   const seekToTime = useCallback((time: number) => {
     if (playerRef.current) {
@@ -224,7 +235,7 @@ const VideoPlayer: React.FC = () => {
               onPlay={() => dispatch({ type: "SET_IS_PLAYING", value: true })}
               onWaiting={() => setIsBuffering(true)}
               playing={isPlaying}
-              ref={playerRef}
+              ref={setPlayerRef}
               src={videoUrl}
               volume={volume}
               width="100%"
