@@ -96,5 +96,5 @@
     "knip": "knip",
     "secretlint": "git ls-files -z | xargs -0 secretlint --maskSecrets"
   },
-  "version": "0.4.1"
+  "version": "0.4.2"
 }
