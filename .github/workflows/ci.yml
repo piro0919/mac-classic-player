@@ -18,9 +18,29 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm run type-check
+      - run: npm run secretlint
+      - run: npm run knip
       - run: npm run build:frontend
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: src-tauri
       - run: cargo test --manifest-path src-tauri/Cargo.toml
+
+  # LP は別の package.json を持つ Next.js のサイト。Vercel に上がる前にここで落とす
+  lp:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: lp
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.22.2
+          cache: npm
+          cache-dependency-path: lp/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm run build

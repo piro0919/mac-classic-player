@@ -1,23 +1,25 @@
 pre-commit:
   parallel: true
   commands:
-    # eslint:
-    #   glob: "**/*.{ts,tsx}"
-    #   run: npx eslint --fix {staged_files}
-    #   stage_fixed: true
+    eslint:
+      glob: "renderer/**/*.{ts,tsx}"
+      run: npx eslint --fix {staged_files}
+      stage_fixed: true
+    # prettier は既存の184ファイルが未整形のため、一度まとめて整形してから有効にする
     # prettier:
     #   glob: "**/*"
     #   run: npx prettier --write {staged_files}
     #   stage_fixed: true
-    # secretlint:
-    #   glob: "**/*"
-    #   run: npx secretlint --maskSecrets {staged_files}
-    # stylelint:
-    #   glob: "**/*.css"
-    #   run: npx stylelint --fix {staged_files}
-    #   stage_fixed: true
-    # typescript:
-    #   run: npx tsc --noEmit
+    secretlint:
+      glob: "**/*"
+      run: npx secretlint --maskSecrets {staged_files}
+    stylelint:
+      glob: "**/*.css"
+      exclude: "lp/**"
+      run: npx stylelint --fix {staged_files}
+      stage_fixed: true
+    typescript:
+      run: npx tsc --noEmit
 commit-msg:
   commands:
     commitlint:
