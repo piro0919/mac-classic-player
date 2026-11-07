@@ -13,6 +13,8 @@ use tauri::{
 use tauri_plugin_fs::FsExt;
 use tauri_plugin_updater::UpdaterExt;
 
+mod window_geometry;
+
 /// ポイズンしたMutexからも値を取り戻してロックする
 ///
 /// ポイズン＝以前の保持者が更新中にpanicしたということ。ここで守っているのは
@@ -648,13 +650,12 @@ pub fn run() {
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_process::init())
-        // ウィンドウの位置を自動的に保存・復元するプラグイン
-        // SIZE はRetinaで2倍になるバグがあるためJSで手動管理する
+        // ウィンドウの最大化・フルスクリーンなどを保存・復元するプラグイン
+        // 位置と大きさは倍率の違う画面の間で狂うため、window_geometry で論理座標で扱う
         .plugin(
             tauri_plugin_window_state::Builder::default()
                 .with_state_flags(
-                    tauri_plugin_window_state::StateFlags::POSITION
-                        | tauri_plugin_window_state::StateFlags::MAXIMIZED
+                    tauri_plugin_window_state::StateFlags::MAXIMIZED
                         | tauri_plugin_window_state::StateFlags::VISIBLE
                         | tauri_plugin_window_state::StateFlags::DECORATIONS
                         | tauri_plugin_window_state::StateFlags::FULLSCREEN,
@@ -676,6 +677,29 @@ pub fn run() {
             // システムの言語設定を取得して日本語かどうか判定
             let locale = sys_locale::get_locale().unwrap_or_else(|| "en".to_string());
             let is_japanese = locale.starts_with("ja");
+
+            // メインウィンドウを、保存してある位置と大きさで作る
+            // 作ってから動かすと古い位置に一瞬出るので、作る時点で指定する。
+            // 論理座標で渡すので、どの画面の上に作られても倍率で狂わない
+            let window_config = app
+                .config()
+                .app
+                .windows
+                .iter()
+                .find(|w| w.label == "main")
+                .cloned()
+                .ok_or("main ウィンドウの設定がありません")?;
+            let mut builder = tauri::WebviewWindowBuilder::from_config(app.handle(), &window_config)?;
+            if let Some(placement) = window_geometry::load_placement(app.handle()) {
+                if let Some((width, height)) = placement.size {
+                    builder = builder.inner_size(width, height);
+                }
+                if let Some((x, y)) = placement.position {
+                    builder = builder.position(x, y);
+                }
+            }
+            app.manage(window_geometry::LastGeometry::default());
+            builder.build()?;
 
             // 最近使ったファイルの読み込みと状態登録
             let config_dir = app.path().app_config_dir()?;
@@ -884,6 +908,31 @@ pub fn run() {
 
     // --- アプリケーションの実行とイベントハンドリング ---
     app.run(|app_handle, event| {
+        // 移動・大きさの変更のたびに普通の状態の位置と大きさを覚え、
+        // ウィンドウを閉じるとき・アプリを終了するときにファイルへ書く
+        // （Cmd+Q では CloseRequested が来ないので Exit でも書く）
+        let main_window = || app_handle.get_webview_window("main");
+        match &event {
+            RunEvent::WindowEvent {
+                event: tauri::WindowEvent::Moved(_) | tauri::WindowEvent::Resized(_),
+                ..
+            } => {
+                if let Some(window) = main_window() {
+                    window_geometry::track(&window);
+                }
+            }
+            RunEvent::WindowEvent {
+                event: tauri::WindowEvent::CloseRequested { .. },
+                ..
+            }
+            | RunEvent::Exit => {
+                if let Some(window) = main_window() {
+                    window_geometry::save(&window);
+                }
+            }
+            _ => {}
+        }
+
         // ドラッグ&ドロップされたファイルもストリーミング配信の対象にする
         // （fsプラグイン側のscopeはプラグイン自身が追加する）
         if let RunEvent::WindowEvent {

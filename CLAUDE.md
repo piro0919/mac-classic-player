@@ -78,6 +78,12 @@ renderer/
   ポートは他のプロセスやWebページからも叩けるので、起動ごとの乱数トークンをURLに含め、ユーザーが開いたファイルだけを配信する。
   URLは `get_stream_url` コマンドで発行する。CORSヘッダーは付けない
 - **ファイルの読み取り権限**: capabilitiesにfsの静的scopeは置かない。ユーザーが開いたファイルだけを `allow_opened_paths` で個別に許可する
+- **ウィンドウの位置と大きさ**: `src-tauri/src/window_geometry.rs` が論理座標で `{app_config_dir}/window-geometry.json` に保存し、
+  setup の中でメインウィンドウを作るときに指定する（`tauri.conf.json` のウィンドウは `create: false`）。
+  tauri-plugin-window-state の POSITION / SIZE は使わない。物理ピクセルで保存し、復元時にウィンドウがいる画面の倍率で戻すため、
+  Retina と1倍の外部画面を併用すると起動のたびに座標が2倍・半分になり、画面の外へ出ていく。プラグインは最大化・フルスクリーン・表示だけに使う。
+  保存した位置のタイトルバーがどの画面にも乗っていなければ、位置は指定せず既定の場所に出す（大きさは引き継ぎ、一番大きい画面より大きければ縮める）。
+  最大化・フルスクリーンのまま終了しても直前の位置で戻せるよう、移動と大きさの変更のたびに普通の状態の値を覚えておき、閉じるときと終了するときにファイルへ書く
 - **最近使ったファイル**: 最大10件、`{app_config_dir}/recent_files.json` に永続化、Rust側のみで完結
 - **自動更新**: minisign鍵（`~/.tauri/mac-classic-player.key`）で署名、GitHub Releases経由で配布
 - **ドラッグ&ドロップ**: Tauri v2のネイティブイベント（`onDragDropEvent`）を使用、ブラウザのdropイベントではない
