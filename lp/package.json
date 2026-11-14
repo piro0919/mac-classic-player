@@ -2,7 +2,7 @@
   "dependencies": {
     "@vercel/analytics": "^2.0.1",
     "next": "16.4.6",
-    "next-intl": "^4.14.10",
+    "next-intl": "^4.15.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1"
   },
