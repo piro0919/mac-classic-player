@@ -6,23 +6,23 @@
   "dependencies": {
     "@tauri-apps/api": "2.12.4",
     "@tauri-apps/plugin-fs": "2.7.1",
-    "lucide-react": "0.577.0",
+    "lucide-react": "1.72.0",
     "music-metadata-browser": "2.5.11",
     "react": "19.3.1",
     "react-dom": "19.3.1",
     "react-player": "3.4.0",
-    "ress": "5.0.2",
-    "use-local-storage-state": "19.5.0"
+    "ress": "6.0.0",
+    "use-local-storage-state": "20.0.0"
   },
   "description": "",
   "devDependencies": {
-    "@commitlint/cli": "20.5.3",
-    "@commitlint/config-conventional": "20.5.3",
+    "@commitlint/cli": "21.2.4",
+    "@commitlint/config-conventional": "21.2.4",
     "@eslint/compat": "2.1.1",
     "@eslint/eslintrc": "^3.3.7",
-    "@eslint/js": "9.39.5",
+    "@eslint/js": "10.0.1",
     "@piro0919/eslint-config": "github:piro0919/eslint-config#v1.1.0",
-    "@secretlint/secretlint-rule-preset-recommend": "12.3.1",
+    "@secretlint/secretlint-rule-preset-recommend": "13.1.0",
     "@tauri-apps/cli": "2.12.4",
     "@types/node": "24.19.2",
     "@types/react": "19.3.0",
@@ -31,7 +31,7 @@
     "@typescript-eslint/parser": "8.72.2",
     "@uphold/commitlint-config": "1.1.1",
     "@vitejs/plugin-react": "6.3.0",
-    "eslint": "^9.39.5",
+    "eslint": "^10.14.0",
     "eslint-config-prettier": "10.1.8",
     "eslint-plugin-css": "0.12.0",
     "eslint-plugin-css-modules": "2.12.0",
@@ -49,13 +49,13 @@
     "knip": "6.45.1",
     "lefthook": "2.2.2",
     "prettier": "3.9.10",
-    "secretlint": "12.3.1",
-    "stylelint": "16.26.1",
+    "secretlint": "13.1.0",
+    "stylelint": "18.0.0",
     "stylelint-config-css-modules": "4.6.0",
-    "stylelint-config-recommended": "17.0.0",
+    "stylelint-config-recommended": "19.0.0",
     "stylelint-css-modules-no-global-scoped-selector": "1.0.2",
-    "stylelint-declaration-block-no-ignored-properties": "2.8.0",
-    "stylelint-high-performance-animation": "1.11.0",
+    "stylelint-declaration-block-no-ignored-properties": "3.0.0",
+    "stylelint-high-performance-animation": "2.0.0",
     "stylelint-no-unused-selectors": "1.0.40",
     "stylelint-order": "8.1.3",
     "typescript": "6.0.3",
@@ -66,10 +66,10 @@
   "name": "mac-classic-player",
   "overrides": {
     "stylelint-css-modules-no-global-scoped-selector": {
-      "stylelint": "16.26.1"
+      "stylelint": "18.0.0"
     },
     "stylelint-no-unused-selectors": {
-      "stylelint": "16.26.1"
+      "stylelint": "18.0.0"
     }
   },
   "productName": "Mac Classic Player",
