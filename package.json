@@ -49,7 +49,7 @@
     "knip": "6.46.1",
     "lefthook": "2.2.2",
     "prettier": "3.10.1",
-    "secretlint": "13.1.0",
+    "secretlint": "14.1.0",
     "stylelint": "16.26.1",
     "stylelint-config-css-modules": "4.6.0",
     "stylelint-config-recommended": "17.0.0",
